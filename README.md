@@ -206,6 +206,7 @@ you do not want to rely on the caller’s current directory.
 # Auto-detect (OpenAPI or GraphQL)
 sxmc api https://petstore3.swagger.io/api/v3/openapi.json --list
 sxmc api https://petstore3.swagger.io/api/v3/openapi.json findPetsByStatus status=available
+sxmc api https://petstore3.swagger.io/api/v3/openapi.json findPetsByStatus status=available --format toon
 
 # Explicit modes
 sxmc spec ./openapi.yaml listPets limit=10
@@ -216,6 +217,10 @@ Protected endpoints can use `--auth-header`, and header values support
 `env:VAR_NAME` and `file:/path/to/secret` forms for secret resolution.
 For public OpenAPI smoke tests, `findPetsByStatus` on the Petstore v3 endpoint
 is a more stable example than `getInventory`.
+For structured API responses, `--format json|json-pretty|toon` lets you choose
+between compact JSON, pretty JSON, or a Rust-native TOON-style rendering that
+compresses repeated keys in tabular data. `--pretty` remains a shorthand for
+pretty JSON.
 
 ### Security scanning
 
@@ -370,9 +375,9 @@ SKILLS:
 CLIENT:
   stdio <command> [tool] [args...] [--prompt NAME] [--resource URI] [--list] [--search] [--pretty] [--env K=V] [--cwd DIR]
   http <url> [tool] [args...] [--prompt NAME] [--resource URI] [--list] [--search] [--pretty] [--auth-header K:V]
-  api <source> [operation] [args...] [--list] [--auth-header K:V]
-  spec <source> [operation] [args...] [--list] [--auth-header K:V]
-  graphql <url> [operation] [args...] [--list] [--auth-header K:V]
+  api <source> [operation] [args...] [--list] [--pretty] [--format json|json-pretty|toon] [--auth-header K:V]
+  spec <source> [operation] [args...] [--list] [--pretty] [--format json|json-pretty|toon] [--auth-header K:V]
+  graphql <url> [operation] [args...] [--list] [--pretty] [--format json|json-pretty|toon] [--auth-header K:V]
 
 SECURITY:
   scan [--paths ...] [--skill <name>] [--severity warn|error|critical] [--json]

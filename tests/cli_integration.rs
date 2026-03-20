@@ -1,4 +1,5 @@
 use assert_cmd::Command;
+use axum::{routing::get, Json, Router};
 use predicates::prelude::*;
 use std::fs;
 use std::net::TcpListener;
@@ -660,4 +661,64 @@ async fn test_http_health_endpoint_reports_auth_mode() {
 
     let _ = child.kill();
     let _ = child.wait();
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_spec_supports_toon_output_format() {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let handle = tokio::spawn(async move {
+        let app = Router::new().route(
+            "/pets",
+            get(|| async {
+                Json(serde_json::json!({
+                    "pets": [
+                        {"id": 1, "name": "Mochi"},
+                        {"id": 2, "name": "Pixel"}
+                    ]
+                }))
+            }),
+        );
+        let _ = axum::serve(listener, app).await;
+    });
+
+    let temp = tempfile::tempdir().unwrap();
+    let spec_path = temp.path().join("petstore.json");
+    fs::write(
+        &spec_path,
+        serde_json::json!({
+            "openapi": "3.0.0",
+            "info": { "title": "Local Pets" },
+            "servers": [{ "url": format!("http://{addr}") }],
+            "paths": {
+                "/pets": {
+                    "get": {
+                        "operationId": "listPets",
+                        "summary": "List pets",
+                        "responses": {
+                            "200": { "description": "ok" }
+                        }
+                    }
+                }
+            }
+        })
+        .to_string(),
+    )
+    .unwrap();
+
+    sxmc()
+        .args([
+            "spec",
+            spec_path.to_str().unwrap(),
+            "listPets",
+            "--format",
+            "toon",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("pets[2]{id,name}:"))
+        .stdout(predicate::str::contains(r#"  1,"Mochi""#))
+        .stdout(predicate::str::contains(r#"  2,"Pixel""#));
+
+    handle.abort();
 }

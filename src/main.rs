@@ -152,6 +152,10 @@ enum Commands {
         #[arg(long)]
         pretty: bool,
 
+        /// Structured output format for API responses
+        #[arg(long, value_enum)]
+        format: Option<output::StructuredOutputFormat>,
+
         /// HTTP headers (Key:Value)
         #[arg(long = "auth-header", value_name = "K:V")]
         auth_headers: Vec<String>,
@@ -181,6 +185,10 @@ enum Commands {
         #[arg(long)]
         pretty: bool,
 
+        /// Structured output format for API responses
+        #[arg(long, value_enum)]
+        format: Option<output::StructuredOutputFormat>,
+
         /// HTTP headers (Key:Value)
         #[arg(long = "auth-header", value_name = "K:V")]
         auth_headers: Vec<String>,
@@ -209,6 +217,10 @@ enum Commands {
         /// Pretty-print JSON output
         #[arg(long)]
         pretty: bool,
+
+        /// Structured output format for API responses
+        #[arg(long, value_enum)]
+        format: Option<output::StructuredOutputFormat>,
 
         /// HTTP headers (Key:Value)
         #[arg(long = "auth-header", value_name = "K:V")]
@@ -600,12 +612,22 @@ async fn main() -> anyhow::Result<()> {
             list,
             search,
             pretty,
+            format,
             auth_headers,
         } => {
             let headers = parse_headers(&auth_headers)?;
             let client = api::ApiClient::connect(&source, &headers).await?;
             eprintln!("[sxmc] Detected {} API", client.api_type());
-            cmd_api(&client, operation, &args, list, search.as_deref(), pretty).await?;
+            cmd_api(
+                &client,
+                operation,
+                &args,
+                list,
+                search.as_deref(),
+                pretty,
+                format,
+            )
+            .await?;
         }
 
         Commands::Spec {
@@ -615,13 +637,23 @@ async fn main() -> anyhow::Result<()> {
             list,
             search,
             pretty,
+            format,
             auth_headers,
         } => {
             let headers = parse_headers(&auth_headers)?;
             let spec = openapi::OpenApiSpec::load(&source, &headers).await?;
             eprintln!("[sxmc] Loaded OpenAPI spec: {}", spec.title);
             let client = api::ApiClient::OpenApi(spec);
-            cmd_api(&client, operation, &args, list, search.as_deref(), pretty).await?;
+            cmd_api(
+                &client,
+                operation,
+                &args,
+                list,
+                search.as_deref(),
+                pretty,
+                format,
+            )
+            .await?;
         }
 
         Commands::Graphql {
@@ -631,12 +663,22 @@ async fn main() -> anyhow::Result<()> {
             list,
             search,
             pretty,
+            format,
             auth_headers,
         } => {
             let headers = parse_headers(&auth_headers)?;
             let gql = graphql::GraphQLClient::connect(&url, &headers).await?;
             let client = api::ApiClient::GraphQL(gql);
-            cmd_api(&client, operation, &args, list, search.as_deref(), pretty).await?;
+            cmd_api(
+                &client,
+                operation,
+                &args,
+                list,
+                search.as_deref(),
+                pretty,
+                format,
+            )
+            .await?;
         }
 
         Commands::Scan {
@@ -947,17 +989,15 @@ async fn cmd_api(
     list: bool,
     search: Option<&str>,
     pretty: bool,
+    format: Option<output::StructuredOutputFormat>,
 ) -> anyhow::Result<()> {
     if list || search.is_some() {
         println!("{}", client.format_list(search));
     } else if let Some(op_name) = operation {
         let arguments = parse_string_kv_args(args);
         let result = client.execute(&op_name, &arguments).await?;
-        if pretty {
-            println!("{}", serde_json::to_string_pretty(&result)?);
-        } else {
-            println!("{}", result);
-        }
+        let format = output::resolve_structured_format(format, pretty);
+        println!("{}", output::format_structured_value(&result, format));
     } else {
         eprintln!("Specify an operation name or use --list");
         std::process::exit(1);

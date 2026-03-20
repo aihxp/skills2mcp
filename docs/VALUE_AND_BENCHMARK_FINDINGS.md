@@ -20,6 +20,11 @@ In practice, the bridge is still most valuable for **tool surfaces**, but the
 same CLI now reaches prompts/resources directly with `--prompt` and
 `--resource`, which helps when the useful context is descriptive rather than executable.
 
+For API responses specifically, `sxmc` also supports `--format toon` as a
+Rust-native TOON-style rendering for structured JSON. That is most useful when
+responses contain repeated object keys, because the rendered output can compress
+those keys into a tabular layout that is easier for both humans and models to scan.
+
 ## Representative wall-clock results (CLI)
 
 Environment: **Linux x86_64**, **sxmc 0.1.2**, **5 runs**, **median milliseconds**. Commands hit public Petstore where noted (network variance is expected).
