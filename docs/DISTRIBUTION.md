@@ -12,10 +12,10 @@ Homebrew formula are convenience distribution channels layered on top.
 
 Current repo alignment:
 
-- crate version: `0.1.2`
-- npm wrapper metadata: `0.1.2`
-- Homebrew formula source tarball: `v0.1.2`
-- GitHub Release binaries: `v0.1.2`
+- crate version: `0.1.3`
+- npm wrapper metadata: `0.1.3`
+- Homebrew formula source tarball: current release tag
+- GitHub Release binaries: `v0.1.3`
 
 ## npm Wrapper
 
@@ -36,7 +36,7 @@ npm publish ./packaging/npm --access public
 
 Before publishing, verify that the matching GitHub Release assets already exist
 for the wrapper version, including the checksum files. The current in-repo
-wrapper is aligned to `v0.1.2`.
+wrapper is aligned to `v0.1.3`.
 
 Before publishing, keep the npm package version aligned with:
 
@@ -66,8 +66,8 @@ brew install aihxp/tap/sxmc
 ```
 
 If you promote the formula into a real tap, update the tarball URL and `sha256`
-for each released version. The in-repo formula is currently pinned to the
-`v0.1.2` source archive.
+for each released version. The in-repo formula should track the current
+release tag.
 
 Tap-specific guidance lives in [`packaging/homebrew/README.md`](../packaging/homebrew/README.md).
 
@@ -82,9 +82,9 @@ sxmc-vX.Y.Z-<target>.zip
 
 Examples:
 
-- `sxmc-v0.1.2-x86_64-unknown-linux-gnu.tar.gz`
-- `sxmc-v0.1.2-aarch64-apple-darwin.tar.gz`
-- `sxmc-v0.1.2-x86_64-pc-windows-msvc.zip`
+- `sxmc-v0.1.3-x86_64-unknown-linux-gnu.tar.gz`
+- `sxmc-v0.1.3-aarch64-apple-darwin.tar.gz`
+- `sxmc-v0.1.3-x86_64-pc-windows-msvc.zip`
 
 Those names are what the npm wrapper expects when downloading binaries.
 The wrapper also expects matching checksum files with the same name plus

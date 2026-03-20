@@ -59,9 +59,9 @@ cargo install sxmc
 Other channels:
 
 - GitHub Releases: prebuilt archives plus `.sha256` files
-- npm wrapper metadata aligned to `0.1.2`: [`packaging/npm`](packaging/npm)
+- npm wrapper metadata aligned to `0.1.3`: [`packaging/npm`](packaging/npm)
   The wrapper downloads and verifies release binaries during `postinstall`.
-- Homebrew formula pinned to `v0.1.2`: [`packaging/homebrew/sxmc.rb`](packaging/homebrew/sxmc.rb)
+- Homebrew formula pinned to the current release tag: [`packaging/homebrew/sxmc.rb`](packaging/homebrew/sxmc.rb)
   Tap guidance: [`packaging/homebrew/README.md`](packaging/homebrew/README.md)
 
 Or build from source:
