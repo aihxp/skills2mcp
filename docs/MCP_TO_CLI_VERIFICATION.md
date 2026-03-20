@@ -46,6 +46,8 @@ So the precise contract is:
 
 ## Manual checks performed
 
+For **captured stdout/stderr samples** of the nested **skills → MCP → CLI** path (fixture `tests/fixtures`), see **[SKILLS_TO_MCP_TO_CLI_SAMPLES.md](SKILLS_TO_MCP_TO_CLI_SAMPLES.md)**.
+
 ### 1. `sxmc stdio` (nested skills server)
 
 ```bash
