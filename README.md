@@ -59,8 +59,8 @@ cargo install sxmc
 Other channels:
 
 - GitHub Releases: prebuilt archives plus `.sha256` files
-- npm wrapper scaffold: [`packaging/npm`](packaging/npm)
-- Homebrew formula scaffold: [`packaging/homebrew/sxmc.rb`](packaging/homebrew/sxmc.rb)
+- npm wrapper metadata aligned to `0.1.2`: [`packaging/npm`](packaging/npm)
+- Homebrew formula pinned to `v0.1.2`: [`packaging/homebrew/sxmc.rb`](packaging/homebrew/sxmc.rb)
 
 Or build from source:
 

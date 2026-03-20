@@ -10,6 +10,13 @@ This repo also includes scaffolding for additional channels.
 Those channels are scaffolded here, but not yet treated as the primary install
 path. The Rust crate and GitHub Release assets remain canonical.
 
+Current repo alignment:
+
+- crate version: `0.1.2`
+- npm wrapper metadata: `0.1.2`
+- Homebrew formula source tarball: `v0.1.2`
+- GitHub Release binaries: `v0.1.2`
+
 ## npm Wrapper
 
 The npm wrapper lives in [`packaging/npm`](../packaging/npm).
@@ -25,6 +32,9 @@ Planned publish target:
 ```bash
 npm publish ./packaging/npm --access public
 ```
+
+Before publishing, verify that the matching GitHub Release assets already exist
+for the wrapper version. The current in-repo wrapper is aligned to `v0.1.2`.
 
 Before publishing, keep the npm package version aligned with:
 
@@ -49,7 +59,8 @@ brew install aihxp/tap/sxmc
 ```
 
 If you promote the formula into a real tap, update the tarball URL and `sha256`
-for each released version.
+for each released version. The in-repo formula is currently pinned to the
+`v0.1.2` source archive.
 
 ## Release Asset Naming
 
