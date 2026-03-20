@@ -1,6 +1,8 @@
 use assert_cmd::Command;
 use predicates::prelude::*;
+use std::fs;
 use std::net::TcpListener;
+use std::path::Path;
 use std::process::Command as ProcessCommand;
 use std::time::Duration;
 
@@ -20,6 +22,24 @@ fn pick_unused_port() -> u16 {
         .local_addr()
         .unwrap()
         .port()
+}
+
+fn copy_dir_recursive(src: &Path, dst: &Path) {
+    fs::create_dir_all(dst).unwrap();
+
+    for entry in fs::read_dir(src).unwrap() {
+        let entry = entry.unwrap();
+        let src_path = entry.path();
+        let dst_path = dst.join(entry.file_name());
+
+        if src_path.is_dir() {
+            copy_dir_recursive(&src_path, &dst_path);
+        } else {
+            fs::copy(&src_path, &dst_path).unwrap();
+            let perms = fs::metadata(&src_path).unwrap().permissions();
+            fs::set_permissions(&dst_path, perms).unwrap();
+        }
+    }
 }
 
 #[test]
@@ -315,6 +335,35 @@ fn test_stdio_hybrid_get_skill_related_file() {
         .success()
         .stdout(predicate::str::contains("# Style Guide"))
         .stdout(predicate::str::contains("Use clear, concise language"));
+}
+
+#[test]
+fn test_stdio_executes_project_local_skill_script_without_explicit_paths() {
+    let temp = tempfile::tempdir().unwrap();
+    let skill_src = Path::new("tests/fixtures/skill-with-scripts");
+    let skill_dst = temp
+        .path()
+        .join(".claude")
+        .join("skills")
+        .join("skill-with-scripts");
+
+    copy_dir_recursive(skill_src, &skill_dst);
+
+    let inner = format!("{} serve", sxmc_bin_string());
+
+    sxmc()
+        .current_dir(temp.path())
+        .args([
+            "stdio",
+            &inner,
+            "skill_with_scripts__hello",
+            "args=from-regression-test",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(
+            "Hello from script! Args: from-regression-test",
+        ));
 }
 
 #[test]

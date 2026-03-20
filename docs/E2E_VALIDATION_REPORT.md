@@ -1,6 +1,6 @@
 # End-to-end validation report
 
-This document records a full validation pass of **sxmc** (skills, MCP stdio bridge, OpenAPI `api` command, scan, bake) and contrasts **crates.io v0.1.1** behavior with a **build from source** that includes the fixes on branch `fix/script-path-resolution-and-api-builder-error` (commit `560882a`).
+This document records a full validation pass of **sxmc** (skills, MCP stdio bridge, OpenAPI `api` command, scan, bake) and contrasts **crates.io v0.1.1** behavior with the fixes now landed on `master` and prepared for **v0.1.2**.
 
 ## Environment (representative)
 
@@ -23,7 +23,7 @@ Script execution failed: Failed to run .claude/skills/<skill>/scripts/<script>: 
 
 **Workaround on v0.1.1:** Use an absolute `--paths` when serving, e.g. `sxmc serve --paths /home/you/.claude/skills`.
 
-**Fix (560882a):** Canonicalize skill directories in discovery/parsing so script paths are always absolute.
+**Fix:** Canonicalize skill directories in discovery/parsing so script paths are always absolute.
 
 ### 2. `sxmc api` operation calls fail with “builder error” for some OpenAPI 3 specs
 
@@ -38,7 +38,7 @@ Error: HTTP request failed: builder error
 
 **Example spec:** `https://petstore3.swagger.io/api/v3/openapi.json` — `servers[0].url` is `/api/v3`.
 
-**Fix (560882a):** Resolve relative `servers[0].url` values against the **spec source URL** so the base URL is absolute.
+**Fix:** Resolve relative `servers[0].url` values against the **spec source URL** so the base URL is absolute.
 
 ## Automated test suite (from repo root)
 
@@ -63,7 +63,7 @@ cargo build --release
 # Binary: target/release/sxmc
 ```
 
-| Check | Command / expectation | With fixes (560882a) |
+| Check | Command / expectation | With fixes on `master` / v0.1.2 |
 |-------|----------------------|----------------------|
 | Skills | `sxmc skills list` / `info` / `run` | OK |
 | Scan | `sxmc scan`, `sxmc scan --json` | OK |
@@ -81,11 +81,11 @@ Calling `getInventory` against the public Petstore may return **HTTP 500** or an
 
 ## Installing the validated build locally
 
-Until a new crates.io release ships the fixes:
+Until crates.io `v0.1.2` ships the fixes:
 
 ```bash
 git fetch origin
-git checkout fix/script-path-resolution-and-api-builder-error
+git checkout master
 cargo install --path . --force
 ```
 
@@ -93,5 +93,5 @@ Or build and use `target/release/sxmc` directly.
 
 ## References
 
-- Fix commit: `560882a` — *Fix script path resolution and API builder error*
+- Fix commit on `master`: `54d58c2` — *Fix script path resolution and API builder error*
 - Related maintainer doc: [SMOKE_TESTS.md](SMOKE_TESTS.md)

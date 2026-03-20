@@ -49,6 +49,14 @@ sxmc http http://127.0.0.1:8000/mcp \
 - OpenAPI and GraphQL API-to-CLI support
 - built-in security scanning
 
+### Patch Release Notes (`0.1.2`)
+
+- fixes project-local `.claude/skills` script execution when using
+  `sxmc stdio "sxmc serve"` without an explicit `--paths`
+- fixes OpenAPI 3 specs that expose relative `servers[0].url` values
+- adds regression coverage for both fixes and keeps the E2E validation report
+  in-tree for maintainers
+
 ### Install
 
 ```bash

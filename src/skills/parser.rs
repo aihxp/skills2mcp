@@ -30,7 +30,9 @@ pub fn split_frontmatter(content: &str) -> Result<(String, String)> {
 
 /// Parse a SKILL.md file into a Skill struct.
 pub fn parse_skill(skill_dir: &Path, source: &str) -> Result<Skill> {
-    let skill_dir = skill_dir.canonicalize().unwrap_or_else(|_| skill_dir.to_path_buf());
+    let skill_dir = skill_dir
+        .canonicalize()
+        .unwrap_or_else(|_| skill_dir.to_path_buf());
     let skill_md = skill_dir.join("SKILL.md");
     let content = std::fs::read_to_string(&skill_md)?;
 

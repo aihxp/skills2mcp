@@ -172,8 +172,8 @@ usually the friendlier option.
 
 ```bash
 # Auto-detect (OpenAPI or GraphQL)
-sxmc api https://petstore.swagger.io/v3/openapi.json --list
-sxmc api https://petstore.swagger.io/v3/openapi.json listPets limit=10
+sxmc api https://petstore3.swagger.io/api/v3/openapi.json --list
+sxmc api https://petstore3.swagger.io/api/v3/openapi.json findPetsByStatus status=available
 
 # Explicit modes
 sxmc spec ./openapi.yaml listPets limit=10
@@ -182,6 +182,8 @@ sxmc graphql https://api.example.com/graphql users limit=5
 
 Protected endpoints can use `--auth-header`, and header values support
 `env:VAR_NAME` and `file:/path/to/secret` forms for secret resolution.
+For public OpenAPI smoke tests, `findPetsByStatus` on the Petstore v3 endpoint
+is a more stable example than `getInventory`.
 
 ### Security scanning
 

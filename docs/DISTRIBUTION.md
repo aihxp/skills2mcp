@@ -62,8 +62,8 @@ sxmc-vX.Y.Z-<target>.zip
 
 Examples:
 
-- `sxmc-v0.1.1-x86_64-unknown-linux-gnu.tar.gz`
-- `sxmc-v0.1.1-aarch64-apple-darwin.tar.gz`
-- `sxmc-v0.1.1-x86_64-pc-windows-msvc.zip`
+- `sxmc-v0.1.2-x86_64-unknown-linux-gnu.tar.gz`
+- `sxmc-v0.1.2-aarch64-apple-darwin.tar.gz`
+- `sxmc-v0.1.2-x86_64-pc-windows-msvc.zip`
 
 Those names are what the npm wrapper expects when downloading binaries.

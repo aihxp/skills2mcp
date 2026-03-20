@@ -21,7 +21,7 @@ sxmc serve
 ## Notes
 
 - This package expects GitHub Release assets named like
-  `sxmc-v0.1.1-x86_64-unknown-linux-gnu.tar.gz`.
+  `sxmc-vX.Y.Z-x86_64-unknown-linux-gnu.tar.gz`.
 - Supported targets match the release workflow:
   - `x86_64-unknown-linux-gnu`
   - `x86_64-apple-darwin`

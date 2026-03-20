@@ -13,7 +13,10 @@ automatically.
 
 1. Update version in `Cargo.toml`
 2. Make sure `README.md` and `docs/CLIENTS.md` reflect the current public MCP surface
-3. Run:
+3. Review [`docs/E2E_VALIDATION_REPORT.md`](E2E_VALIDATION_REPORT.md) and carry forward any
+   release-specific smoke findings that should remain true for the next patch
+   release
+4. Run:
 
 ```bash
 cargo fmt
@@ -23,7 +26,7 @@ cargo package
 bash scripts/smoke_test_clients.sh target/debug/sxmc tests/fixtures
 ```
 
-4. Smoke-test both MCP entrypoints:
+5. Smoke-test both MCP entrypoints:
 
 ```bash
 sxmc serve --paths tests/fixtures
@@ -33,6 +36,15 @@ sxmc serve --transport http --host 127.0.0.1 --port 8000 \
 sxmc serve --transport http --host 127.0.0.1 --port 8000 \
   --bearer-token test-token --paths tests/fixtures
 ```
+
+For the `0.1.2` patch line, keep these regressions covered before tagging:
+
+- project-local `.claude/skills` should work without an explicit `--paths`
+  override when bridged through `sxmc stdio "sxmc serve"`
+- OpenAPI specs with relative `servers[0].url` values should execute correctly;
+  the public Petstore v3 spec at
+  `https://petstore3.swagger.io/api/v3/openapi.json` plus
+  `findPetsByStatus status=available` is the preferred smoke target
 
 ## Create a Release Tag
 

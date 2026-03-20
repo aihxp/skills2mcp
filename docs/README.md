@@ -8,5 +8,5 @@ Additional documentation for sxmc developers and maintainers.
 | [RELEASING.md](RELEASING.md) | Release process, version bumping, and crates.io publishing |
 | [DISTRIBUTION.md](DISTRIBUTION.md) | Distribution channels: npm wrapper, Homebrew formula, asset naming |
 | [SMOKE_TESTS.md](SMOKE_TESTS.md) | Client smoke test procedures (automated and manual) |
-| [E2E_VALIDATION_REPORT.md](E2E_VALIDATION_REPORT.md) | E2E validation: crates.io v0.1.1 issues, fixes, and test matrix |
+| [E2E_VALIDATION_REPORT.md](E2E_VALIDATION_REPORT.md) | E2E validation: v0.1.1 regressions, 0.1.2 fixes, and the manual test matrix |
 | [LAUNCH.md](LAUNCH.md) | Release notes template, pitch copy, and announcement drafts |
