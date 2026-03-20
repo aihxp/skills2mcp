@@ -57,13 +57,19 @@ enum Commands {
 
     /// Connect to an MCP server via stdio (MCP Server → CLI)
     Stdio {
-        /// Command to spawn the MCP server
+        /// Command spec to spawn the MCP server.
+        /// Supports shell-style quoting or a JSON array like ["sxmc","serve"].
         command: String,
 
-        /// Tool or prompt to call (omit for --list)
-        tool_name: Option<String>,
+        /// Prompt to fetch
+        #[arg(long, conflicts_with = "resource_uri")]
+        prompt: Option<String>,
 
-        /// Arguments as key=value pairs
+        /// Resource URI to read
+        #[arg(long = "resource", conflicts_with = "prompt")]
+        resource_uri: Option<String>,
+
+        /// Tool name followed by key=value pairs
         #[arg(trailing_var_arg = true)]
         args: Vec<String>,
 
@@ -82,6 +88,10 @@ enum Commands {
         /// Environment variables for the server (KEY=VALUE)
         #[arg(long = "env", value_name = "KEY=VALUE")]
         env_vars: Vec<String>,
+
+        /// Working directory for the spawned MCP server
+        #[arg(long)]
+        cwd: Option<PathBuf>,
     },
 
     /// Connect to an MCP server via HTTP (MCP Server → CLI)
@@ -89,10 +99,15 @@ enum Commands {
         /// MCP server URL
         url: String,
 
-        /// Tool or prompt to call (omit for --list)
-        tool_name: Option<String>,
+        /// Prompt to fetch
+        #[arg(long, conflicts_with = "resource_uri")]
+        prompt: Option<String>,
 
-        /// Arguments as key=value pairs
+        /// Resource URI to read
+        #[arg(long = "resource", conflicts_with = "prompt")]
+        resource_uri: Option<String>,
+
+        /// Tool name followed by key=value pairs
         #[arg(trailing_var_arg = true)]
         args: Vec<String>,
 
@@ -137,6 +152,10 @@ enum Commands {
         #[arg(long)]
         pretty: bool,
 
+        /// Structured output format for API responses
+        #[arg(long, value_enum)]
+        format: Option<output::StructuredOutputFormat>,
+
         /// HTTP headers (Key:Value)
         #[arg(long = "auth-header", value_name = "K:V")]
         auth_headers: Vec<String>,
@@ -166,6 +185,10 @@ enum Commands {
         #[arg(long)]
         pretty: bool,
 
+        /// Structured output format for API responses
+        #[arg(long, value_enum)]
+        format: Option<output::StructuredOutputFormat>,
+
         /// HTTP headers (Key:Value)
         #[arg(long = "auth-header", value_name = "K:V")]
         auth_headers: Vec<String>,
@@ -194,6 +217,10 @@ enum Commands {
         /// Pretty-print JSON output
         #[arg(long)]
         pretty: bool,
+
+        /// Structured output format for API responses
+        #[arg(long, value_enum)]
+        format: Option<output::StructuredOutputFormat>,
 
         /// HTTP headers (Key:Value)
         #[arg(long = "auth-header", value_name = "K:V")]
@@ -467,15 +494,21 @@ async fn main() -> anyhow::Result<()> {
 
         Commands::Stdio {
             command,
-            tool_name,
+            prompt,
+            resource_uri,
             args,
             list,
             search,
             pretty,
             env_vars,
+            cwd,
         } => {
             let env = parse_env_vars(&env_vars);
-            let client = mcp_stdio::StdioClient::connect(&command, &env).await?;
+            let client = mcp_stdio::StdioClient::connect(&command, &env, cwd.as_deref()).await?;
+            let (tool_name, tool_args) = args
+                .split_first()
+                .map(|(name, rest)| (Some(name.as_str()), rest))
+                .unwrap_or((None, &[]));
 
             if list || search.is_some() {
                 let tools = client.list_tools().await?;
@@ -492,12 +525,24 @@ async fn main() -> anyhow::Result<()> {
                     println!();
                     println!("{}", output::format_resource_list(&resources));
                 }
-            } else if let Some(name) = tool_name {
+            } else if let Some(name) = prompt {
                 let arguments = parse_kv_args(&args);
-                let result = client.call_tool(&name, arguments).await?;
+                let arguments = if arguments.is_empty() {
+                    None
+                } else {
+                    Some(arguments)
+                };
+                let result = client.get_prompt(&name, arguments).await?;
+                println!("{}", output::format_prompt_result(&result, pretty));
+            } else if let Some(uri) = resource_uri {
+                let result = client.read_resource(&uri).await?;
+                println!("{}", output::format_resource_result(&result, pretty));
+            } else if let Some(name) = tool_name {
+                let arguments = parse_kv_args(tool_args);
+                let result = client.call_tool(name, arguments).await?;
                 println!("{}", output::format_tool_result(&result, pretty));
             } else {
-                eprintln!("Specify a tool name or use --list");
+                eprintln!("Specify a tool name, --prompt, --resource, or use --list");
                 std::process::exit(1);
             }
 
@@ -506,7 +551,8 @@ async fn main() -> anyhow::Result<()> {
 
         Commands::Http {
             url,
-            tool_name,
+            prompt,
+            resource_uri,
             args,
             list,
             search,
@@ -515,6 +561,10 @@ async fn main() -> anyhow::Result<()> {
         } => {
             let headers = parse_headers(&auth_headers)?;
             let client = mcp_http::HttpClient::connect(&url, &headers).await?;
+            let (tool_name, tool_args) = args
+                .split_first()
+                .map(|(name, rest)| (Some(name.as_str()), rest))
+                .unwrap_or((None, &[]));
 
             if list || search.is_some() {
                 let tools = client.list_tools().await?;
@@ -531,12 +581,24 @@ async fn main() -> anyhow::Result<()> {
                     println!();
                     println!("{}", output::format_resource_list(&resources));
                 }
-            } else if let Some(name) = tool_name {
+            } else if let Some(name) = prompt {
                 let arguments = parse_kv_args(&args);
-                let result = client.call_tool(&name, arguments).await?;
+                let arguments = if arguments.is_empty() {
+                    None
+                } else {
+                    Some(arguments)
+                };
+                let result = client.get_prompt(&name, arguments).await?;
+                println!("{}", output::format_prompt_result(&result, pretty));
+            } else if let Some(uri) = resource_uri {
+                let result = client.read_resource(&uri).await?;
+                println!("{}", output::format_resource_result(&result, pretty));
+            } else if let Some(name) = tool_name {
+                let arguments = parse_kv_args(tool_args);
+                let result = client.call_tool(name, arguments).await?;
                 println!("{}", output::format_tool_result(&result, pretty));
             } else {
-                eprintln!("Specify a tool name or use --list");
+                eprintln!("Specify a tool name, --prompt, --resource, or use --list");
                 std::process::exit(1);
             }
 
@@ -550,12 +612,22 @@ async fn main() -> anyhow::Result<()> {
             list,
             search,
             pretty,
+            format,
             auth_headers,
         } => {
             let headers = parse_headers(&auth_headers)?;
             let client = api::ApiClient::connect(&source, &headers).await?;
             eprintln!("[sxmc] Detected {} API", client.api_type());
-            cmd_api(&client, operation, &args, list, search.as_deref(), pretty).await?;
+            cmd_api(
+                &client,
+                operation,
+                &args,
+                list,
+                search.as_deref(),
+                pretty,
+                format,
+            )
+            .await?;
         }
 
         Commands::Spec {
@@ -565,13 +637,23 @@ async fn main() -> anyhow::Result<()> {
             list,
             search,
             pretty,
+            format,
             auth_headers,
         } => {
             let headers = parse_headers(&auth_headers)?;
             let spec = openapi::OpenApiSpec::load(&source, &headers).await?;
             eprintln!("[sxmc] Loaded OpenAPI spec: {}", spec.title);
             let client = api::ApiClient::OpenApi(spec);
-            cmd_api(&client, operation, &args, list, search.as_deref(), pretty).await?;
+            cmd_api(
+                &client,
+                operation,
+                &args,
+                list,
+                search.as_deref(),
+                pretty,
+                format,
+            )
+            .await?;
         }
 
         Commands::Graphql {
@@ -581,12 +663,22 @@ async fn main() -> anyhow::Result<()> {
             list,
             search,
             pretty,
+            format,
             auth_headers,
         } => {
             let headers = parse_headers(&auth_headers)?;
             let gql = graphql::GraphQLClient::connect(&url, &headers).await?;
             let client = api::ApiClient::GraphQL(gql);
-            cmd_api(&client, operation, &args, list, search.as_deref(), pretty).await?;
+            cmd_api(
+                &client,
+                operation,
+                &args,
+                list,
+                search.as_deref(),
+                pretty,
+                format,
+            )
+            .await?;
         }
 
         Commands::Scan {
@@ -610,7 +702,7 @@ async fn main() -> anyhow::Result<()> {
             if let Some(ref mcp_cmd) = mcp_stdio_cmd {
                 // Scan MCP server via stdio
                 let env = parse_env_vars(&env_vars);
-                let client = mcp_stdio::StdioClient::connect(mcp_cmd, &env).await?;
+                let client = mcp_stdio::StdioClient::connect(mcp_cmd, &env, None).await?;
                 let tools = client.list_tools().await?;
                 let report = security::mcp_scanner::scan_tools(&tools, mcp_cmd);
                 reports.push(report);
@@ -897,17 +989,15 @@ async fn cmd_api(
     list: bool,
     search: Option<&str>,
     pretty: bool,
+    format: Option<output::StructuredOutputFormat>,
 ) -> anyhow::Result<()> {
     if list || search.is_some() {
         println!("{}", client.format_list(search));
     } else if let Some(op_name) = operation {
         let arguments = parse_string_kv_args(args);
         let result = client.execute(&op_name, &arguments).await?;
-        if pretty {
-            println!("{}", serde_json::to_string_pretty(&result)?);
-        } else {
-            println!("{}", result);
-        }
+        let format = output::resolve_structured_format(format, pretty);
+        println!("{}", output::format_structured_value(&result, format));
     } else {
         eprintln!("Specify an operation name or use --list");
         std::process::exit(1);

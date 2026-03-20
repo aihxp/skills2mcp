@@ -43,6 +43,16 @@ struct HttpAuthConfig {
 struct HttpServerInfo {
     auth_enabled: bool,
     auth_schemes: Vec<&'static str>,
+    skill_count: usize,
+    tool_count: usize,
+    resource_count: usize,
+}
+
+#[derive(Clone, Debug, Default)]
+struct SkillInventorySummary {
+    skill_count: usize,
+    tool_count: usize,
+    resource_count: usize,
 }
 
 impl HttpAuth {
@@ -135,8 +145,31 @@ async fn health_handler(info: Arc<HttpServerInfo>) -> Json<serde_json::Value> {
         "auth": {
             "enabled": info.auth_enabled,
             "schemes": info.auth_schemes,
+        },
+        "inventory": {
+            "skills": info.skill_count,
+            "tools": info.tool_count,
+            "resources": info.resource_count,
         }
     }))
+}
+
+fn summarize_paths(paths: &[PathBuf]) -> SkillInventorySummary {
+    let mut summary = SkillInventorySummary::default();
+    let Ok(skill_dirs) = discovery::discover_skills(paths) else {
+        return summary;
+    };
+
+    for dir in &skill_dirs {
+        let source = dir.parent().and_then(|p| p.to_str()).unwrap_or("unknown");
+        if let Ok(skill) = parser::parse_skill(dir, source) {
+            summary.skill_count += 1;
+            summary.tool_count += skill.scripts.len();
+            summary.resource_count += skill.references.len();
+        }
+    }
+
+    summary
 }
 
 /// Build a SkillsServer from skill search paths.
@@ -205,10 +238,14 @@ fn build_http_router(
     cancellation_token: CancellationToken,
     auth: Arc<HttpAuthConfig>,
 ) -> Router {
+    let summary = summarize_paths(paths.as_ref());
     let service = build_streamable_http_service(paths, cancellation_token);
     let info = Arc::new(HttpServerInfo {
         auth_enabled: !auth.is_empty(),
         auth_schemes: auth.schemes.clone(),
+        skill_count: summary.skill_count,
+        tool_count: summary.tool_count,
+        resource_count: summary.resource_count,
     });
     let mcp_router = Router::new().nest_service("/mcp", service);
     let mcp_router = if auth.is_empty() {
@@ -433,6 +470,9 @@ mod tests {
             response["auth"]["schemes"],
             serde_json::json!(["headers", "bearer"])
         );
+        assert_eq!(response["inventory"]["skills"], 4);
+        assert_eq!(response["inventory"]["tools"], 1);
+        assert_eq!(response["inventory"]["resources"], 1);
 
         cancel.cancel();
         handle.await.unwrap();

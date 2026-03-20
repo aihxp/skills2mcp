@@ -10,13 +10,13 @@ One Rust binary. Skills become MCP servers. MCP servers become CLI commands. Any
 
 **sxmc** solves this. One Rust binary that:
 - Turns skill directories into MCP servers (stdio or remote HTTP)
-- Makes any MCP server usable from the command line
+- Makes MCP tools, prompts, and resources usable from the command line
 - Auto-generates CLI commands from OpenAPI and GraphQL specs
 - Scans skills and MCP servers for security threats
 
 ```
-Skills  -->  MCP Server    (serve skills to any MCP client)
-MCP Server  -->  CLI       (turn any MCP server into CLI commands)
+Skills  -->  MCP Server     (serve skills to any MCP client)
+MCP Server  -->  CLI        (list MCP surfaces, invoke MCP tools)
 Any API  -->  CLI           (OpenAPI & GraphQL auto-detection)
 ```
 
@@ -59,8 +59,10 @@ cargo install sxmc
 Other channels:
 
 - GitHub Releases: prebuilt archives plus `.sha256` files
-- npm wrapper scaffold: [`packaging/npm`](packaging/npm)
-- Homebrew formula scaffold: [`packaging/homebrew/sxmc.rb`](packaging/homebrew/sxmc.rb)
+- npm wrapper metadata aligned to `0.1.3`: [`packaging/npm`](packaging/npm)
+  The wrapper downloads and verifies release binaries during `postinstall`.
+- Homebrew formula pinned to the current release tag: [`packaging/homebrew/sxmc.rb`](packaging/homebrew/sxmc.rb)
+  Tap guidance: [`packaging/homebrew/README.md`](packaging/homebrew/README.md)
 
 Or build from source:
 
@@ -77,6 +79,11 @@ Additional setup and client-specific configuration examples are in
 [`docs/DISTRIBUTION.md`](docs/DISTRIBUTION.md), smoke checks are in
 [`docs/SMOKE_TESTS.md`](docs/SMOKE_TESTS.md), and launch copy is in
 [`docs/LAUNCH.md`](docs/LAUNCH.md).
+
+Package-specific notes:
+
+- npm wrapper docs: [`packaging/npm/README.md`](packaging/npm/README.md)
+- Homebrew tap docs: [`packaging/homebrew/README.md`](packaging/homebrew/README.md)
 
 ## Quick Start
 
@@ -146,11 +153,24 @@ consume HTTP MCP endpoints.
 # stdio server
 sxmc stdio "npx @mcp/github" --list
 sxmc stdio "npx @mcp/github" search-repos query=rust
+sxmc stdio "npx @mcp/github" --prompt triage-template
+sxmc stdio "npx @mcp/github" --resource "repo://octocat/hello-world/README.md"
 
 # HTTP server
 sxmc http https://mcp.example.com/mcp --list
 sxmc http https://mcp.example.com/mcp my-tool key=value
+sxmc http https://mcp.example.com/mcp --prompt triage-template
+sxmc http https://mcp.example.com/mcp --resource "repo://octocat/hello-world/README.md"
 ```
+
+`sxmc stdio` and `sxmc http` are MCP bridges that can:
+- list **tools**, **prompts**, and **resources**
+- invoke **tools**
+- fetch **prompts** with `--prompt`
+- read **resources** with `--resource`
+
+This makes them especially useful for shell automation, CI, debugging, and
+inspecting an MCP server outside an IDE or agent UI.
 
 That means skills can flow through both stages in one go:
 
@@ -159,14 +179,33 @@ That means skills can flow through both stages in one go:
 sxmc stdio "sxmc serve --paths tests/fixtures" --list
 sxmc stdio "sxmc serve --paths tests/fixtures" get_available_skills --pretty
 sxmc stdio "sxmc serve --paths tests/fixtures" get_skill_details name=simple-skill --pretty
+sxmc stdio "sxmc serve --paths tests/fixtures" --prompt simple-skill arguments=friend
+sxmc stdio "sxmc serve --paths tests/fixtures" --resource \
+  "skill://skill-with-references/references/style-guide.md"
 sxmc stdio "sxmc serve --paths tests/fixtures" get_skill_related_file \
   skill_name=skill-with-references \
   relative_path=references/style-guide.md
 ```
 
+Hosted MCP servers work the same way over HTTP:
+
+```bash
+sxmc http http://127.0.0.1:8000/mcp \
+  --auth-header "Authorization: Bearer $SXMC_MCP_TOKEN" \
+  --list
+sxmc http http://127.0.0.1:8000/mcp \
+  --auth-header "Authorization: Bearer $SXMC_MCP_TOKEN" \
+  --prompt simple-skill arguments=friend
+```
+
 For hosted `/mcp` endpoints, prefer `--require-header` so remote access is not
 left open by default. For single-token hosted deployments, `--bearer-token` is
 usually the friendlier option.
+
+For `sxmc stdio`, you can now pass either shell-style quoting or a JSON-array
+command spec such as `["sxmc","serve","--paths","tests/fixtures"]`. For nested
+or project-local servers, `--cwd` gives you an explicit working directory when
+you do not want to rely on the caller’s current directory.
 
 ### Any API as CLI
 
@@ -174,6 +213,7 @@ usually the friendlier option.
 # Auto-detect (OpenAPI or GraphQL)
 sxmc api https://petstore3.swagger.io/api/v3/openapi.json --list
 sxmc api https://petstore3.swagger.io/api/v3/openapi.json findPetsByStatus status=available
+sxmc api https://petstore3.swagger.io/api/v3/openapi.json findPetsByStatus status=available --format toon
 
 # Explicit modes
 sxmc spec ./openapi.yaml listPets limit=10
@@ -184,6 +224,10 @@ Protected endpoints can use `--auth-header`, and header values support
 `env:VAR_NAME` and `file:/path/to/secret` forms for secret resolution.
 For public OpenAPI smoke tests, `findPetsByStatus` on the Petstore v3 endpoint
 is a more stable example than `getInventory`.
+For structured API responses, `--format json|json-pretty|toon` lets you choose
+between compact JSON, pretty JSON, or a Rust-native TOON-style rendering that
+compresses repeated keys in tabular data. `--pretty` remains a shorthand for
+pretty JSON.
 
 ### Security scanning
 
@@ -319,7 +363,8 @@ remote streamable HTTP MCP endpoint at `/mcp`.
 - Recommended for hosted remote MCP: `--bearer-token env:SXMC_MCP_TOKEN`
 - Health endpoint for hosted deployments: `/healthz`
 
-See [`docs/CLIENTS.md`](docs/CLIENTS.md) for setup examples.
+See [`docs/CLIENTS.md`](docs/CLIENTS.md) for client-specific setup examples,
+the current compatibility matrix, and repeatable smoke-check commands.
 
 ## CLI Reference
 
@@ -336,11 +381,11 @@ SKILLS:
   skills create <api-url> [--output-dir DIR] [--auth-header K:V]
 
 CLIENT:
-  stdio <command> [tool] [args...] [--list] [--search] [--pretty] [--env K=V]
-  http <url> [tool] [args...] [--list] [--search] [--pretty] [--auth-header K:V]
-  api <source> [operation] [args...] [--list] [--auth-header K:V]
-  spec <source> [operation] [args...] [--list] [--auth-header K:V]
-  graphql <url> [operation] [args...] [--list] [--auth-header K:V]
+  stdio <command> [tool] [args...] [--prompt NAME] [--resource URI] [--list] [--search] [--pretty] [--env K=V] [--cwd DIR]
+  http <url> [tool] [args...] [--prompt NAME] [--resource URI] [--list] [--search] [--pretty] [--auth-header K:V]
+  api <source> [operation] [args...] [--list] [--pretty] [--format json|json-pretty|toon] [--auth-header K:V]
+  spec <source> [operation] [args...] [--list] [--pretty] [--format json|json-pretty|toon] [--auth-header K:V]
+  graphql <url> [operation] [args...] [--list] [--pretty] [--format json|json-pretty|toon] [--auth-header K:V]
 
 SECURITY:
   scan [--paths ...] [--skill <name>] [--severity warn|error|critical] [--json]

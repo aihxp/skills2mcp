@@ -12,7 +12,18 @@ This note collects **why sxmc is useful**, **how to measure it**, and **represen
 | **Security** (`scan`) | LLM-only “please audit this skill” passes (slow, variable) |
 | **Distribution** | One Rust binary (plus optional wrappers) instead of several stacks |
 
-**Even a single, narrow MCP server** often benefits from **`sxmc stdio …` / `sxmc http …`**: scriptability, `--list` / `--pretty` inspection, CI, and debugging outside a full agent.
+**Even a single, narrow MCP server** often benefits from **`sxmc stdio …` /
+`sxmc http …`**: scriptability, `--list` / `--pretty` inspection, CI,
+debugging outside a full agent, and on-demand prompt/resource retrieval.
+
+In practice, the bridge is still most valuable for **tool surfaces**, but the
+same CLI now reaches prompts/resources directly with `--prompt` and
+`--resource`, which helps when the useful context is descriptive rather than executable.
+
+For API responses specifically, `sxmc` also supports `--format toon` as a
+Rust-native TOON-style rendering for structured JSON. That is most useful when
+responses contain repeated object keys, because the rendered output can compress
+those keys into a tabular layout that is easier for both humans and models to scan.
 
 ## Representative wall-clock results (CLI)
 

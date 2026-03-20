@@ -77,6 +77,22 @@ impl HttpClient {
         Ok(result.prompts)
     }
 
+    pub async fn get_prompt(
+        &self,
+        name: &str,
+        arguments: Option<serde_json::Map<String, serde_json::Value>>,
+    ) -> Result<GetPromptResult> {
+        let mut params = GetPromptRequestParams::new(name);
+        params.arguments = arguments;
+
+        let result = self
+            .service
+            .get_prompt(params)
+            .await
+            .map_err(|e| SxmcError::McpError(format!("get_prompt failed: {}", e)))?;
+        Ok(result)
+    }
+
     pub async fn list_resources(&self) -> Result<Vec<Resource>> {
         let result = self
             .service
@@ -84,6 +100,16 @@ impl HttpClient {
             .await
             .map_err(|e| SxmcError::McpError(format!("list_resources failed: {}", e)))?;
         Ok(result.resources)
+    }
+
+    pub async fn read_resource(&self, uri: &str) -> Result<ReadResourceResult> {
+        let params = ReadResourceRequestParams::new(uri);
+        let result = self
+            .service
+            .read_resource(params)
+            .await
+            .map_err(|e| SxmcError::McpError(format!("read_resource failed: {}", e)))?;
+        Ok(result)
     }
 
     pub async fn close(self) -> Result<()> {

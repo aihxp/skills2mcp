@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.3] - 2026-03-20
+
+### Added
+
+- `--prompt` and `--resource` support for `sxmc stdio` and `sxmc http`
+- safer stdio spawning with JSON-array command specs and `--cwd`
+- inventory counts in the remote `/healthz` endpoint
+- optional TOON-style structured output for `api`, `spec`, and `graphql`
+- checksum verification in the npm wrapper installer
+- Homebrew tap guidance under `packaging/homebrew/README.md`
+
+### Changed
+
+- MCP-to-CLI docs now describe the full bridge contract for tools, prompts, and resources
+- distribution docs now treat crates.io and GitHub Releases as canonical, with npm/Homebrew as convenience channels
+
 ## [0.1.2] - 2026-03-20
 
 ### Added
@@ -61,4 +77,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 [0.1.1]: https://github.com/aihxp/sxmc/compare/v0.1.0...v0.1.1
 [0.1.2]: https://github.com/aihxp/sxmc/compare/v0.1.1...v0.1.2
+[0.1.3]: https://github.com/aihxp/sxmc/compare/v0.1.2...v0.1.3
 [0.1.0]: https://github.com/aihxp/sxmc/releases/tag/v0.1.0

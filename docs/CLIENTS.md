@@ -167,6 +167,7 @@ Health and smoke checks:
 ```bash
 curl http://127.0.0.1:8000/healthz
 sxmc http http://127.0.0.1:8000/mcp --auth-header "Authorization: Bearer $SXMC_MCP_TOKEN" --list
+sxmc http http://127.0.0.1:8000/mcp --auth-header "Authorization: Bearer $SXMC_MCP_TOKEN" --prompt simple-skill arguments=friend
 ```
 
 Because `sxmc` exposes a hybrid surface, these clients can use:
@@ -186,6 +187,10 @@ For broadest compatibility, prefer the hybrid pattern already implemented by
 
 Those generic tools are the most portable across clients that are better at
 tool calling than prompt/resource handling.
+
+For shell-side inspection outside those clients, `sxmc stdio` / `sxmc http`
+can now fetch native prompts/resources directly with `--prompt` and
+`--resource` in addition to calling tools.
 
 ## Release and Distribution
 

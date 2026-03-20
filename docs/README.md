@@ -10,5 +10,5 @@ Additional documentation for sxmc developers and maintainers.
 | [SMOKE_TESTS.md](SMOKE_TESTS.md) | Client smoke test procedures (automated and manual) |
 | [E2E_VALIDATION_REPORT.md](E2E_VALIDATION_REPORT.md) | E2E validation: v0.1.1 regressions, 0.1.2 fixes, and the manual test matrix |
 | [VALUE_AND_BENCHMARK_FINDINGS.md](VALUE_AND_BENCHMARK_FINDINGS.md) | Value proposition, benchmark timings, token estimation guidance |
-| [MCP_TO_CLI_VERIFICATION.md](MCP_TO_CLI_VERIFICATION.md) | MCP → CLI (`stdio` / `http`) verification notes and manual checks |
+| [MCP_TO_CLI_VERIFICATION.md](MCP_TO_CLI_VERIFICATION.md) | MCP → CLI (`stdio` / `http`) verification notes, bridge contract, and manual checks |
 | [LAUNCH.md](LAUNCH.md) | Release notes template, pitch copy, and announcement drafts |

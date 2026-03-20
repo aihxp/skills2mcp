@@ -9,6 +9,7 @@
 //! - **Skills → MCP server** — serve skill directories as stdio or HTTP MCP endpoints
 //! - **MCP server → CLI** — turn any MCP server into command-line tools
 //! - **API → CLI** — auto-detect OpenAPI or GraphQL specs and execute operations
+//!   with JSON or TOON-style structured output
 //!
 //! The crate powers the `sxmc` binary, but it also exposes the building blocks
 //! that the CLI uses internally. That makes it useful if you want to embed

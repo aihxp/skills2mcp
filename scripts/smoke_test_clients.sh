@@ -40,6 +40,13 @@ echo "Smoke check: Codex/Cursor/Gemini-style stdio flow"
 "${BIN}" stdio "${BIN} serve --paths ${FIXTURES}" --list >"${TMPDIR}/stdio.txt"
 grep -q "get_available_skills" "${TMPDIR}/stdio.txt"
 grep -q "skill_with_scripts__hello" "${TMPDIR}/stdio.txt"
+"${BIN}" stdio "${BIN} serve --paths ${FIXTURES}" --prompt simple-skill arguments=smoke \
+  >"${TMPDIR}/stdio-prompt.txt"
+grep -q "Hello smoke, welcome to sxmc!" "${TMPDIR}/stdio-prompt.txt"
+"${BIN}" stdio "${BIN} serve --paths ${FIXTURES}" --resource \
+  "skill://skill-with-references/references/style-guide.md" \
+  >"${TMPDIR}/stdio-resource.txt"
+grep -q "# Style Guide" "${TMPDIR}/stdio-resource.txt"
 
 echo "Smoke check: remote HTTP MCP flow"
 "${BIN}" serve --transport http --host 127.0.0.1 --port "${PORT_HTTP}" --paths "${FIXTURES}" \
@@ -48,6 +55,13 @@ PID_HTTP=$!
 wait_for_health "http://127.0.0.1:${PORT_HTTP}/healthz"
 "${BIN}" http "http://127.0.0.1:${PORT_HTTP}/mcp" --list >"${TMPDIR}/http.txt"
 grep -q "get_skill_details" "${TMPDIR}/http.txt"
+"${BIN}" http "http://127.0.0.1:${PORT_HTTP}/mcp" --prompt simple-skill arguments=smoke \
+  >"${TMPDIR}/http-prompt.txt"
+grep -q "Hello smoke, welcome to sxmc!" "${TMPDIR}/http-prompt.txt"
+"${BIN}" http "http://127.0.0.1:${PORT_HTTP}/mcp" --resource \
+  "skill://skill-with-references/references/style-guide.md" \
+  >"${TMPDIR}/http-resource.txt"
+grep -q "# Style Guide" "${TMPDIR}/http-resource.txt"
 
 echo "Smoke check: bearer-protected remote HTTP MCP flow"
 SXMC_SMOKE_TOKEN="${BEARER_TOKEN}" \
