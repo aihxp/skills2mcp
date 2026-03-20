@@ -37,7 +37,11 @@ pub struct Finding {
 
 impl fmt::Display for Finding {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "[{}] {} ({}): {}", self.severity, self.code, self.title, self.description)?;
+        write!(
+            f,
+            "[{}] {} ({}): {}",
+            self.severity, self.code, self.title, self.description
+        )?;
         if let Some(ref loc) = self.location {
             write!(f, " at {}", loc)?;
         }
@@ -85,7 +89,9 @@ impl ScanReport {
     }
 
     pub fn has_critical(&self) -> bool {
-        self.findings.iter().any(|f| f.severity == Severity::Critical)
+        self.findings
+            .iter()
+            .any(|f| f.severity == Severity::Critical)
     }
 
     pub fn has_errors(&self) -> bool {

@@ -4,8 +4,8 @@ use std::path::PathBuf;
 use std::collections::HashMap;
 
 use sxmc::auth::secrets::resolve_header;
-use sxmc::bake::{BakeConfig, BakeStore};
 use sxmc::bake::config::SourceType;
+use sxmc::bake::{BakeConfig, BakeStore};
 use sxmc::client::{api, graphql, mcp_http, mcp_stdio, openapi};
 use sxmc::error::Result;
 use sxmc::output;
@@ -28,13 +28,17 @@ enum Commands {
         #[arg(long, value_delimiter = ',')]
         paths: Option<Vec<PathBuf>>,
 
-        /// Transport: stdio or sse
+        /// Transport: stdio, http, or sse (alias for http)
         #[arg(long, default_value = "stdio")]
         transport: String,
 
-        /// Port for SSE transport
+        /// Port for HTTP transport
         #[arg(long, default_value = "8000")]
         port: u16,
+
+        /// Host for HTTP transport
+        #[arg(long, default_value = "127.0.0.1")]
+        host: String,
     },
 
     /// Manage skills
@@ -256,9 +260,7 @@ enum BakeAction {
     /// List all baked configs
     List,
     /// Show details for a baked config
-    Show {
-        name: String,
-    },
+    Show { name: String },
     /// Update an existing baked config
     Update {
         /// Config name
@@ -285,9 +287,7 @@ enum BakeAction {
         env_vars: Vec<String>,
     },
     /// Remove a baked config
-    Remove {
-        name: String,
-    },
+    Remove { name: String },
 }
 
 #[derive(Subcommand)]
@@ -347,7 +347,10 @@ fn parse_kv_args(args: &[String]) -> serde_json::Map<String, serde_json::Value> 
 
 fn parse_env_vars(vars: &[String]) -> Vec<(String, String)> {
     vars.iter()
-        .filter_map(|v| v.split_once('=').map(|(k, v)| (k.to_string(), v.to_string())))
+        .filter_map(|v| {
+            v.split_once('=')
+                .map(|(k, v)| (k.to_string(), v.to_string()))
+        })
         .collect()
 }
 
@@ -390,15 +393,13 @@ async fn main() -> anyhow::Result<()> {
         Commands::Serve {
             paths,
             transport,
-            port: _port,
+            port,
+            host,
         } => {
             let search_paths = resolve_paths(paths);
             match transport.as_str() {
                 "stdio" => server::serve_stdio(&search_paths).await?,
-                "sse" => {
-                    eprintln!("[sxmc] SSE transport not yet implemented");
-                    std::process::exit(1);
-                }
+                "http" | "sse" => server::serve_http(&search_paths, &host, port).await?,
                 other => {
                     eprintln!("[sxmc] Unknown transport: {}", other);
                     std::process::exit(1);
@@ -413,12 +414,21 @@ async fn main() -> anyhow::Result<()> {
             SkillsAction::Info { name, paths } => {
                 cmd_skills_info(&resolve_paths(paths), &name)?;
             }
-            SkillsAction::Run { name, arguments, paths } => {
+            SkillsAction::Run {
+                name,
+                arguments,
+                paths,
+            } => {
                 cmd_skills_run(&resolve_paths(paths), &name, &arguments).await?;
             }
-            SkillsAction::Create { source, output_dir, auth_headers } => {
+            SkillsAction::Create {
+                source,
+                output_dir,
+                auth_headers,
+            } => {
                 let headers = parse_headers(&auth_headers)?;
-                let skill_dir = generator::generate_from_openapi(&source, &output_dir, &headers).await?;
+                let skill_dir =
+                    generator::generate_from_openapi(&source, &output_dir, &headers).await?;
                 println!("Generated skill at: {}", skill_dir.display());
             }
         },
@@ -609,7 +619,10 @@ async fn main() -> anyhow::Result<()> {
                         serde_json::to_string_pretty(&filtered_report.format_json())?
                     );
                 } else if filtered_report.is_clean() {
-                    println!("[PASS] {} — no issues at severity >= {}", report.target, severity);
+                    println!(
+                        "[PASS] {} — no issues at severity >= {}",
+                        report.target, severity
+                    );
                 } else {
                     println!("{}", filtered_report.format_text());
                     if filtered_report.has_errors() {

@@ -30,7 +30,8 @@ impl StdioClient {
         let transport = TokioChildProcess::new(cmd)
             .map_err(|e| SxmcError::McpError(format!("Failed to spawn: {}", e)))?;
 
-        let service = ().serve(transport)
+        let service = ()
+            .serve(transport)
             .await
             .map_err(|e| SxmcError::McpError(format!("Failed to initialize MCP session: {}", e)))?;
 

@@ -38,7 +38,8 @@ Additional setup and client-specific configuration examples are in
 # stdio (for MCP client configs)
 sxmc serve
 
-# SSE transport is planned but not yet implemented
+# Streamable HTTP MCP endpoint at http://127.0.0.1:8000/mcp
+sxmc serve --transport http --host 127.0.0.1 --port 8000
 ```
 
 Add to any MCP client config:
@@ -62,6 +63,8 @@ When served over MCP, each skill is exposed in a hybrid form:
 
 This lets `sxmc` work well with local stdio-based MCP clients such as Codex,
 Cursor, Gemini CLI, and similar coding agents.
+It can also be hosted as a remote streamable HTTP MCP server for clients that
+consume HTTP MCP endpoints.
 
 ### Any MCP server as CLI
 
@@ -71,8 +74,8 @@ sxmc stdio "npx @mcp/github" --list
 sxmc stdio "npx @mcp/github" search-repos query=rust
 
 # HTTP server
-sxmc http https://mcp.example.com/sse --list
-sxmc http https://mcp.example.com/sse my-tool key=value
+sxmc http https://mcp.example.com/mcp --list
+sxmc http https://mcp.example.com/mcp my-tool key=value
 ```
 
 That means skills can flow through both stages in one go:
@@ -215,11 +218,11 @@ Built on [rmcp](https://github.com/nicepkg/rmcp) (official Rust MCP SDK).
 
 ## Client Compatibility
 
-`sxmc` currently targets local stdio MCP clients first.
+`sxmc` currently targets local stdio MCP clients first, and also supports a
+remote streamable HTTP MCP endpoint at `/mcp`.
 
 - Supported now: Codex, Cursor, Gemini CLI, Claude Code-style local MCP clients
-- Not yet supported directly: ChatGPT Apps / Claude.ai remote connectors, because
-  `serve --transport sse` is still not implemented
+- Supported now for remote MCP consumers too: streamable HTTP MCP at `/mcp`
 
 See [`docs/CLIENTS.md`](docs/CLIENTS.md) for setup examples.
 
@@ -229,7 +232,7 @@ See [`docs/CLIENTS.md`](docs/CLIENTS.md) for setup examples.
 sxmc [subcommand] [options]
 
 SERVER:
-  serve [--paths ...] [--transport stdio] [--port 8000]
+  serve [--paths ...] [--transport stdio|http|sse] [--host 127.0.0.1] [--port 8000]
 
 SKILLS:
   skills list [--paths ...] [--json]

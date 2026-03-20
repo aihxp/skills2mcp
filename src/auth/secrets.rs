@@ -8,12 +8,8 @@ use crate::error::{Result, SxmcError};
 /// - anything else — returned as-is (literal value)
 pub fn resolve_secret(value: &str) -> Result<String> {
     if let Some(var_name) = value.strip_prefix("env:") {
-        std::env::var(var_name).map_err(|_| {
-            SxmcError::Other(format!(
-                "Environment variable '{}' not set",
-                var_name
-            ))
-        })
+        std::env::var(var_name)
+            .map_err(|_| SxmcError::Other(format!("Environment variable '{}' not set", var_name)))
     } else if let Some(path) = value.strip_prefix("file:") {
         std::fs::read_to_string(path)
             .map(|s| s.trim().to_string())
@@ -26,9 +22,12 @@ pub fn resolve_secret(value: &str) -> Result<String> {
 /// Resolve a header value, applying secret resolution to the value part.
 /// Input format: "Key:Value" where Value can use env:/file: prefixes.
 pub fn resolve_header(header: &str) -> Result<(String, String)> {
-    let (key, value) = header
-        .split_once(':')
-        .ok_or_else(|| SxmcError::Other(format!("Invalid header format '{}' — expected Key:Value", header)))?;
+    let (key, value) = header.split_once(':').ok_or_else(|| {
+        SxmcError::Other(format!(
+            "Invalid header format '{}' — expected Key:Value",
+            header
+        ))
+    })?;
 
     let resolved = resolve_secret(value.trim())?;
     Ok((key.trim().to_string(), resolved))

@@ -50,11 +50,7 @@ pub fn commands_from_mcp_tools(tools: &[rmcp::model::Tool]) -> Vec<CommandDef> {
 
             CommandDef {
                 name: tool.name.to_string(),
-                description: tool
-                    .description
-                    .as_deref()
-                    .unwrap_or("")
-                    .to_string(),
+                description: tool.description.as_deref().unwrap_or("").to_string(),
                 params,
             }
         })
@@ -88,9 +84,7 @@ fn extract_params_from_schema(schema: &serde_json::Map<String, Value>) -> Vec<Pa
                 .map(ParamType::from_json_schema)
                 .unwrap_or(ParamType::String);
 
-            let default = prop_schema
-                .get("default")
-                .map(|v| v.to_string());
+            let default = prop_schema.get("default").map(|v| v.to_string());
 
             params.push(ParamDef {
                 name: name.clone(),

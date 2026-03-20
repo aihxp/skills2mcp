@@ -22,6 +22,13 @@ cargo test
 cargo package
 ```
 
+4. Smoke-test both MCP entrypoints:
+
+```bash
+sxmc serve --paths tests/fixtures
+sxmc serve --transport http --host 127.0.0.1 --port 8000 --paths tests/fixtures
+```
+
 ## Create a Release Tag
 
 ```bash
@@ -60,6 +67,7 @@ cargo install --git https://github.com/aihxp/sxmc
 
 If possible, avoid breaking these without a version bump and README update:
 - `sxmc serve`
+- remote MCP endpoint shape: `sxmc serve --transport http ...` at `/mcp`
 - hybrid tools:
   - `get_available_skills`
   - `get_skill_details`

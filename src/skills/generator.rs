@@ -31,7 +31,10 @@ pub async fn generate_from_openapi(
             body.push_str("\nParameters:\n");
             for param in &cmd.params {
                 let req = if param.required { " (required)" } else { "" };
-                body.push_str(&format!("- `{}`{}: {}\n", param.name, req, param.description));
+                body.push_str(&format!(
+                    "- `{}`{}: {}\n",
+                    param.name, req, param.description
+                ));
             }
         }
         body.push('\n');
@@ -40,13 +43,15 @@ pub async fn generate_from_openapi(
     // Build argument hint from all unique parameter names
     let mut all_params: Vec<String> = commands
         .iter()
-        .flat_map(|c| c.params.iter().map(|p| {
-            if p.required {
-                format!("<{}>", p.name)
-            } else {
-                format!("[{}]", p.name)
-            }
-        }))
+        .flat_map(|c| {
+            c.params.iter().map(|p| {
+                if p.required {
+                    format!("<{}>", p.name)
+                } else {
+                    format!("[{}]", p.name)
+                }
+            })
+        })
         .collect();
     all_params.sort();
     all_params.dedup();
@@ -70,7 +75,13 @@ fn sanitize_name(title: &str) -> String {
     title
         .to_lowercase()
         .chars()
-        .map(|c| if c.is_alphanumeric() || c == '-' { c } else { '-' })
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' {
+                c
+            } else {
+                '-'
+            }
+        })
         .collect::<String>()
         .trim_matches('-')
         .to_string()

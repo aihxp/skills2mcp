@@ -34,7 +34,8 @@ impl HttpClient {
 
         let transport = StreamableHttpClientTransport::with_client(client, config);
 
-        let service: RunningService<RoleClient, ()> = ().serve(transport)
+        let service: RunningService<RoleClient, ()> = ()
+            .serve(transport)
             .await
             .map_err(|e| SxmcError::McpError(format!("Failed to connect: {}", e)))?;
 

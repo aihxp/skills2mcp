@@ -9,9 +9,8 @@ pub struct PatternSet {
 
 // ── Prompt Injection Patterns ──────────────────────────────────────────────
 
-static PI_IGNORE_PREVIOUS: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)ignore\s+(all\s+)?previous\s+instructions").unwrap()
-});
+static PI_IGNORE_PREVIOUS: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)ignore\s+(all\s+)?previous\s+instructions").unwrap());
 
 static PI_SYSTEM_PROMPT: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?i)(you\s+are\s+now|your\s+new\s+(role|instructions?)|act\s+as\s+if|pretend\s+(you\s+are|to\s+be)|from\s+now\s+on\s+you)").unwrap()
@@ -41,25 +40,22 @@ pub fn prompt_injection_patterns() -> Vec<&'static LazyLock<Regex>> {
 
 // ── Secrets Patterns ───────────────────────────────────────────────────────
 
-static SECRET_AWS_KEY: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)(AKIA[0-9A-Z]{16})").unwrap()
-});
+static SECRET_AWS_KEY: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)(AKIA[0-9A-Z]{16})").unwrap());
 
 static SECRET_AWS_SECRET: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?i)aws[_\-]?secret[_\-]?access[_\-]?key\s*[=:]\s*[A-Za-z0-9/+=]{40}").unwrap()
 });
 
-static SECRET_GITHUB_TOKEN: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{82})").unwrap()
-});
+static SECRET_GITHUB_TOKEN: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{82})").unwrap());
 
 static SECRET_GENERIC_API_KEY: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r#"(?i)(api[_\-]?key|api[_\-]?secret|api[_\-]?token)\s*[=:]\s*['"]?[A-Za-z0-9\-_.]{20,}['"]?"#).unwrap()
 });
 
-static SECRET_PRIVATE_KEY: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"-----BEGIN\s+(RSA\s+)?PRIVATE\s+KEY-----").unwrap()
-});
+static SECRET_PRIVATE_KEY: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"-----BEGIN\s+(RSA\s+)?PRIVATE\s+KEY-----").unwrap());
 
 static SECRET_PASSWORD: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r#"(?i)(password|passwd|pwd)\s*[=:]\s*['"][^'"]{8,}['"]"#).unwrap()
@@ -69,17 +65,14 @@ static SECRET_CONNECTION_STRING: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?i)(mongodb|postgres|mysql|redis|amqp)://[^\s]+:[^\s]+@").unwrap()
 });
 
-static SECRET_SLACK_TOKEN: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"xox[baprs]-[0-9]{10,13}-[A-Za-z0-9-]{10,}").unwrap()
-});
+static SECRET_SLACK_TOKEN: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"xox[baprs]-[0-9]{10,13}-[A-Za-z0-9-]{10,}").unwrap());
 
-static SECRET_ANTHROPIC_KEY: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"sk-ant-[A-Za-z0-9\-_]{80,}").unwrap()
-});
+static SECRET_ANTHROPIC_KEY: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"sk-ant-[A-Za-z0-9\-_]{80,}").unwrap());
 
-static SECRET_OPENAI_KEY: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"sk-[A-Za-z0-9]{48,}").unwrap()
-});
+static SECRET_OPENAI_KEY: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"sk-[A-Za-z0-9]{48,}").unwrap());
 
 pub fn secrets_patterns() -> Vec<&'static LazyLock<Regex>> {
     vec![
@@ -98,29 +91,22 @@ pub fn secrets_patterns() -> Vec<&'static LazyLock<Regex>> {
 
 // ── Dangerous Script Patterns ──────────────────────────────────────────────
 
-static DANGEROUS_RM_RF: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"rm\s+-[^\s]*r[^\s]*f|rm\s+-[^\s]*f[^\s]*r").unwrap()
-});
+static DANGEROUS_RM_RF: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"rm\s+-[^\s]*r[^\s]*f|rm\s+-[^\s]*f[^\s]*r").unwrap());
 
-static DANGEROUS_CHMOD_777: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"chmod\s+777").unwrap()
-});
+static DANGEROUS_CHMOD_777: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"chmod\s+777").unwrap());
 
-static DANGEROUS_EVAL: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"\beval\s*[("'`]"#).unwrap()
-});
+static DANGEROUS_EVAL: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"\beval\s*[("'`]"#).unwrap());
 
-static DANGEROUS_CURL_PIPE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"curl\s+[^\|]+\|\s*(sh|bash|zsh|python|perl|ruby|node)").unwrap()
-});
+static DANGEROUS_CURL_PIPE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"curl\s+[^\|]+\|\s*(sh|bash|zsh|python|perl|ruby|node)").unwrap());
 
-static DANGEROUS_WGET_EXEC: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"wget\s+[^\s;|]+\s*[;&|]+\s*(sh|bash|chmod|\./)").unwrap()
-});
+static DANGEROUS_WGET_EXEC: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"wget\s+[^\s;|]+\s*[;&|]+\s*(sh|bash|chmod|\./)").unwrap());
 
-static DANGEROUS_BASE64_DECODE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"base64\s+(-d|--decode)\s*\|").unwrap()
-});
+static DANGEROUS_BASE64_DECODE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"base64\s+(-d|--decode)\s*\|").unwrap());
 
 static DANGEROUS_REVERSE_SHELL: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?i)(/dev/tcp/|nc\s+-[^\s]*e|mkfifo|bash\s+-i\s+>&|exec\s+\d+<>/dev/tcp)").unwrap()
@@ -141,23 +127,20 @@ pub fn dangerous_script_patterns() -> Vec<&'static LazyLock<Regex>> {
 // ── Network Exfiltration Patterns ──────────────────────────────────────────
 
 static EXFIL_WEBHOOK: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)(webhook\.site|requestbin\.com|pipedream\.net|hookbin\.com|burpcollaborator)").unwrap()
+    Regex::new(r"(?i)(webhook\.site|requestbin\.com|pipedream\.net|hookbin\.com|burpcollaborator)")
+        .unwrap()
 });
 
-static EXFIL_DNS: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)(nslookup|dig|host)\s+\$").unwrap()
-});
+static EXFIL_DNS: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)(nslookup|dig|host)\s+\$").unwrap());
 
 static EXFIL_CURL_POST_ENV: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"curl\s+[^\n]*-X\s*POST[^\n]*\$(\w+|HOME|PATH|USER|SSH|AWS|API|TOKEN|SECRET|KEY)").unwrap()
+    Regex::new(r"curl\s+[^\n]*-X\s*POST[^\n]*\$(\w+|HOME|PATH|USER|SSH|AWS|API|TOKEN|SECRET|KEY)")
+        .unwrap()
 });
 
 pub fn network_exfil_patterns() -> Vec<&'static LazyLock<Regex>> {
-    vec![
-        &EXFIL_WEBHOOK,
-        &EXFIL_DNS,
-        &EXFIL_CURL_POST_ENV,
-    ]
+    vec![&EXFIL_WEBHOOK, &EXFIL_DNS, &EXFIL_CURL_POST_ENV]
 }
 
 // ── Hidden Content Patterns ────────────────────────────────────────────────

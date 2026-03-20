@@ -46,11 +46,7 @@ impl ApiClient {
     }
 
     /// Execute an operation by name.
-    pub async fn execute(
-        &self,
-        name: &str,
-        args: &HashMap<String, String>,
-    ) -> Result<Value> {
+    pub async fn execute(&self, name: &str, args: &HashMap<String, String>) -> Result<Value> {
         match self {
             ApiClient::OpenApi(spec) => spec.execute(name, args).await,
             ApiClient::GraphQL(client) => client.execute(name, args).await,

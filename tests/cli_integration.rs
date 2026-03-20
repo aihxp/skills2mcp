@@ -1,5 +1,8 @@
 use assert_cmd::Command;
 use predicates::prelude::*;
+use std::net::TcpListener;
+use std::process::Command as ProcessCommand;
+use std::time::Duration;
 
 fn sxmc() -> Command {
     Command::cargo_bin("sxmc").unwrap()
@@ -9,6 +12,14 @@ fn sxmc_bin_string() -> String {
     assert_cmd::cargo::cargo_bin("sxmc")
         .to_string_lossy()
         .into_owned()
+}
+
+fn pick_unused_port() -> u16 {
+    TcpListener::bind("127.0.0.1:0")
+        .unwrap()
+        .local_addr()
+        .unwrap()
+        .port()
 }
 
 #[test]
@@ -60,7 +71,13 @@ fn test_skills_list_json() {
 #[test]
 fn test_skills_info() {
     sxmc()
-        .args(["skills", "info", "simple-skill", "--paths", "tests/fixtures"])
+        .args([
+            "skills",
+            "info",
+            "simple-skill",
+            "--paths",
+            "tests/fixtures",
+        ])
         .assert()
         .success()
         .stdout(predicate::str::contains("Name: simple-skill"))
@@ -70,7 +87,13 @@ fn test_skills_info() {
 #[test]
 fn test_skills_info_not_found() {
     sxmc()
-        .args(["skills", "info", "nonexistent-skill", "--paths", "tests/fixtures"])
+        .args([
+            "skills",
+            "info",
+            "nonexistent-skill",
+            "--paths",
+            "tests/fixtures",
+        ])
         .assert()
         .failure();
 }
@@ -86,7 +109,13 @@ fn test_skills_run() {
 #[test]
 fn test_scan_clean_skills() {
     sxmc()
-        .args(["scan", "--paths", "tests/fixtures", "--skill", "simple-skill"])
+        .args([
+            "scan",
+            "--paths",
+            "tests/fixtures",
+            "--skill",
+            "simple-skill",
+        ])
         .assert()
         .success()
         .stdout(predicate::str::contains("PASS"));
@@ -95,7 +124,13 @@ fn test_scan_clean_skills() {
 #[test]
 fn test_scan_malicious_skill() {
     sxmc()
-        .args(["scan", "--paths", "tests/fixtures", "--skill", "malicious-skill"])
+        .args([
+            "scan",
+            "--paths",
+            "tests/fixtures",
+            "--skill",
+            "malicious-skill",
+        ])
         .assert()
         .failure()
         .stdout(predicate::str::contains("CRITICAL"))
@@ -105,7 +140,14 @@ fn test_scan_malicious_skill() {
 #[test]
 fn test_scan_json_output() {
     sxmc()
-        .args(["scan", "--paths", "tests/fixtures", "--skill", "malicious-skill", "--json"])
+        .args([
+            "scan",
+            "--paths",
+            "tests/fixtures",
+            "--skill",
+            "malicious-skill",
+            "--json",
+        ])
         .assert()
         .stdout(predicate::str::contains("\"findings\""))
         .stdout(predicate::str::contains("\"severity\""))
@@ -115,7 +157,15 @@ fn test_scan_json_output() {
 #[test]
 fn test_scan_severity_filter() {
     sxmc()
-        .args(["scan", "--paths", "tests/fixtures", "--skill", "malicious-skill", "--severity", "critical"])
+        .args([
+            "scan",
+            "--paths",
+            "tests/fixtures",
+            "--skill",
+            "malicious-skill",
+            "--severity",
+            "critical",
+        ])
         .assert()
         .failure()
         .stdout(predicate::str::contains("CRITICAL"))
@@ -137,10 +187,15 @@ fn test_bake_lifecycle() {
     // Create
     sxmc()
         .args([
-            "bake", "create", "test-bake",
-            "--type", "stdio",
-            "--source", "echo hello",
-            "--description", "Test bake config",
+            "bake",
+            "create",
+            "test-bake",
+            "--type",
+            "stdio",
+            "--source",
+            "echo hello",
+            "--description",
+            "Test bake config",
         ])
         .assert()
         .success()
@@ -164,9 +219,13 @@ fn test_bake_lifecycle() {
     // Update
     sxmc()
         .args([
-            "bake", "update", "test-bake",
-            "--source", "echo updated",
-            "--description", "Updated bake config",
+            "bake",
+            "update",
+            "test-bake",
+            "--source",
+            "echo updated",
+            "--description",
+            "Updated bake config",
         ])
         .assert()
         .success()
@@ -231,8 +290,12 @@ fn test_stdio_hybrid_get_skill_details() {
         .assert()
         .success()
         .stdout(predicate::str::contains("\"name\": \"simple-skill\""))
-        .stdout(predicate::str::contains("\"prompt_name\": \"simple-skill\""))
-        .stdout(predicate::str::contains("Hello $ARGUMENTS, welcome to sxmc!"));
+        .stdout(predicate::str::contains(
+            "\"prompt_name\": \"simple-skill\"",
+        ))
+        .stdout(predicate::str::contains(
+            "Hello $ARGUMENTS, welcome to sxmc!",
+        ));
 }
 
 #[test]
@@ -252,4 +315,36 @@ fn test_stdio_hybrid_get_skill_related_file() {
         .success()
         .stdout(predicate::str::contains("# Style Guide"))
         .stdout(predicate::str::contains("Use clear, concise language"));
+}
+
+#[test]
+fn test_http_lists_hybrid_skill_tools() {
+    let port = pick_unused_port();
+    let mut child = ProcessCommand::new(sxmc_bin_string())
+        .args([
+            "serve",
+            "--transport",
+            "http",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            &port.to_string(),
+            "--paths",
+            "tests/fixtures",
+        ])
+        .spawn()
+        .unwrap();
+
+    std::thread::sleep(Duration::from_millis(750));
+
+    sxmc()
+        .args(["http", &format!("http://127.0.0.1:{port}/mcp"), "--list"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("get_available_skills"))
+        .stdout(predicate::str::contains("get_skill_details"))
+        .stdout(predicate::str::contains("skill_with_scripts__hello"));
+
+    let _ = child.kill();
+    let _ = child.wait();
 }

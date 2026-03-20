@@ -54,7 +54,10 @@ impl SkillsServer {
     }
 
     fn make_tool_name(skill_name: &str, script_name: &str) -> String {
-        let stem = script_name.rsplit_once('.').map(|(s, _)| s).unwrap_or(script_name);
+        let stem = script_name
+            .rsplit_once('.')
+            .map(|(s, _)| s)
+            .unwrap_or(script_name);
         format!(
             "{}__{}",
             skill_name.replace('-', "_"),
@@ -81,16 +84,16 @@ impl SkillsServer {
     fn build_available_skills_schema() -> Arc<JsonObject> {
         let mut schema = serde_json::Map::new();
         schema.insert("type".into(), "object".into());
-        schema.insert("properties".into(), serde_json::Value::Object(serde_json::Map::new()));
+        schema.insert(
+            "properties".into(),
+            serde_json::Value::Object(serde_json::Map::new()),
+        );
         Arc::new(schema)
     }
 
     fn build_skill_details_schema() -> Arc<JsonObject> {
         let mut props = serde_json::Map::new();
-        props.insert(
-            "name".into(),
-            string_property("Skill name to inspect"),
-        );
+        props.insert("name".into(), string_property("Skill name to inspect"));
         props.insert(
             "return_type".into(),
             string_property("One of: content, file_path, both"),
@@ -408,8 +411,7 @@ impl ServerHandler for SkillsServer {
 
         let messages = vec![PromptMessage::new_text(PromptMessageRole::User, body)];
 
-        Ok(GetPromptResult::new(messages)
-            .with_description(skill.frontmatter.description.clone()))
+        Ok(GetPromptResult::new(messages).with_description(skill.frontmatter.description.clone()))
     }
 
     async fn list_resources(
@@ -515,7 +517,9 @@ fn required_string_arg<'a>(
 ) -> Result<&'a str, McpError> {
     args.and_then(|args| args.get(key))
         .and_then(|value| value.as_str())
-        .ok_or_else(|| McpError::invalid_params(format!("Missing required argument: {}", key), None))
+        .ok_or_else(|| {
+            McpError::invalid_params(format!("Missing required argument: {}", key), None)
+        })
 }
 
 fn return_type_arg(
@@ -540,8 +544,9 @@ fn return_type_arg(
 }
 
 fn json_success(value: serde_json::Value) -> Result<CallToolResult, McpError> {
-    let text = serde_json::to_string_pretty(&value)
-        .map_err(|e| McpError::internal_error(format!("Failed to serialize tool response: {}", e), None))?;
+    let text = serde_json::to_string_pretty(&value).map_err(|e| {
+        McpError::internal_error(format!("Failed to serialize tool response: {}", e), None)
+    })?;
     Ok(CallToolResult::success(vec![Content::text(text)]))
 }
 
@@ -573,10 +578,7 @@ fn resolve_skill_file_path(skill: &Skill, relative_path: &str) -> Result<PathBuf
 
     let candidate = base.join(relative);
     let resolved = candidate.canonicalize().map_err(|e| {
-        McpError::invalid_params(
-            format!("File '{}' not found: {}", relative_path, e),
-            None,
-        )
+        McpError::invalid_params(format!("File '{}' not found: {}", relative_path, e), None)
     })?;
 
     if !resolved.starts_with(&base) {
@@ -599,7 +601,11 @@ fn resolve_skill_file_path(skill: &Skill, relative_path: &str) -> Result<PathBuf
 fn list_skill_files(base_dir: &Path) -> Result<Vec<String>, McpError> {
     let canonical_base = base_dir.canonicalize().map_err(|e| {
         McpError::internal_error(
-            format!("Failed to resolve skill directory {}: {}", base_dir.display(), e),
+            format!(
+                "Failed to resolve skill directory {}: {}",
+                base_dir.display(),
+                e
+            ),
             None,
         )
     })?;
@@ -616,14 +622,15 @@ fn collect_skill_files(
     files: &mut Vec<String>,
 ) -> Result<(), McpError> {
     for entry in std::fs::read_dir(current).map_err(|e| {
-        McpError::internal_error(
-            format!("Failed to read {}: {}", current.display(), e),
-            None,
-        )
+        McpError::internal_error(format!("Failed to read {}: {}", current.display(), e), None)
     })? {
         let entry = entry.map_err(|e| {
             McpError::internal_error(
-                format!("Failed to read directory entry in {}: {}", current.display(), e),
+                format!(
+                    "Failed to read directory entry in {}: {}",
+                    current.display(),
+                    e
+                ),
                 None,
             )
         })?;
@@ -683,7 +690,10 @@ mod tests {
 
         let skill = make_skill(skill_dir);
         let err = resolve_skill_file_path(&skill, "../outside.txt").unwrap_err();
-        assert!(err.message.contains("escapes the skill directory") || err.message.contains("not found"));
+        assert!(
+            err.message.contains("escapes the skill directory")
+                || err.message.contains("not found")
+        );
     }
 
     #[test]

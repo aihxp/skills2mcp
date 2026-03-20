@@ -23,7 +23,11 @@ pub fn scan_tools(tools: &[Tool], server_name: &str) -> ScanReport {
 }
 
 /// Scan a tool response for prompt injection.
-pub fn scan_tool_response(result: &CallToolResult, tool_name: &str, server_name: &str) -> ScanReport {
+pub fn scan_tool_response(
+    result: &CallToolResult,
+    tool_name: &str,
+    server_name: &str,
+) -> ScanReport {
     let mut report = ScanReport::new(&format!("mcp:{}/response:{}", server_name, tool_name));
 
     let texts: Vec<String> = result

@@ -118,8 +118,8 @@ impl GraphQLClient {
         let mut variables = serde_json::Map::new();
         for arg in &op.args {
             if let Some(value) = args.get(&arg.name) {
-                let val = serde_json::from_str(value)
-                    .unwrap_or_else(|_| Value::String(value.clone()));
+                let val =
+                    serde_json::from_str(value).unwrap_or_else(|_| Value::String(value.clone()));
                 variables.insert(arg.name.clone(), val);
             }
         }
@@ -419,8 +419,7 @@ pub fn format_graphql_list(ops: &[&GraphQLOperation], search: Option<&str>) -> S
         let p = pattern.to_lowercase();
         ops.iter()
             .filter(|op| {
-                op.name.to_lowercase().contains(&p)
-                    || op.description.to_lowercase().contains(&p)
+                op.name.to_lowercase().contains(&p) || op.description.to_lowercase().contains(&p)
             })
             .collect()
     } else {
@@ -503,10 +502,7 @@ mod tests {
             }],
             returns_composite: false,
         };
-        assert_eq!(
-            build_query(&op),
-            "query Op($id: ID!) { user(id: $id) }"
-        );
+        assert_eq!(build_query(&op), "query Op($id: ID!) { user(id: $id) }");
     }
 
     #[test]

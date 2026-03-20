@@ -44,10 +44,7 @@ pub struct OpenApiSpec {
 
 impl OpenApiSpec {
     /// Load an OpenAPI spec from a URL or file path.
-    pub async fn load(
-        source: &str,
-        auth_headers: &[(String, String)],
-    ) -> Result<Self> {
+    pub async fn load(source: &str, auth_headers: &[(String, String)]) -> Result<Self> {
         let raw = if source.starts_with("http://") || source.starts_with("https://") {
             fetch_spec(source, auth_headers).await?
         } else {
@@ -152,9 +149,7 @@ impl OpenApiSpec {
             .operations
             .iter()
             .find(|o| o.operation_id == operation_id)
-            .ok_or_else(|| {
-                SxmcError::Other(format!("Operation not found: {}", operation_id))
-            })?;
+            .ok_or_else(|| SxmcError::Other(format!("Operation not found: {}", operation_id)))?;
 
         // Build URL with path parameters substituted
         let mut url = format!("{}{}", self.base_url, op.path);
@@ -293,7 +288,10 @@ fn extract_base_url(spec: &Value) -> String {
     }
 
     // Swagger 2.x: host + basePath
-    let host = spec.get("host").and_then(|v| v.as_str()).unwrap_or("localhost");
+    let host = spec
+        .get("host")
+        .and_then(|v| v.as_str())
+        .unwrap_or("localhost");
     let base_path = spec.get("basePath").and_then(|v| v.as_str()).unwrap_or("");
     let scheme = spec
         .get("schemes")
@@ -356,8 +354,9 @@ fn extract_operations(spec: &Value) -> Vec<OpenApiOperation> {
                 let request_body_schema = operation
                     .get("requestBody")
                     .and_then(|rb| {
-                        rb.pointer("/content/application~1json/schema")
-                            .or_else(|| rb.pointer("/content/application~1x-www-form-urlencoded/schema"))
+                        rb.pointer("/content/application~1json/schema").or_else(|| {
+                            rb.pointer("/content/application~1x-www-form-urlencoded/schema")
+                        })
                     })
                     .cloned();
 
@@ -518,10 +517,7 @@ mod tests {
             "basePath": "/v2",
             "schemes": ["https"]
         });
-        assert_eq!(
-            extract_base_url(&spec),
-            "https://petstore.swagger.io/v2"
-        );
+        assert_eq!(extract_base_url(&spec), "https://petstore.swagger.io/v2");
     }
 
     #[test]
