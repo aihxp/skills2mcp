@@ -49,12 +49,12 @@ sxmc http http://127.0.0.1:8000/mcp \
 - OpenAPI and GraphQL API-to-CLI support
 - built-in security scanning
 
-### Patch Release Notes (`0.1.4`)
+### Patch Release Notes (`0.1.5`)
 
-- adds `sxmc serve --watch` so local skill edits reload automatically
-- fixes Windows stdio command parsing and removes redundant skill discovery
-- adds reproducible benchmark notes and carries forward benchmark interpretation guidance
-- keeps the broader MCP bridge, TOON output, and packaging channels aligned in the patch line
+- adds capability-aware MCP discovery with `--describe` and `--describe-tool`
+- adds explicit `--list-tools`, `--list-prompts`, and `--list-resources` modes
+- keeps `--list` successful on prompt-less MCP servers by skipping unsupported surfaces
+- hardens HTTP bridge tests with readiness waits so the full suite stays stable
 
 ### Install
 

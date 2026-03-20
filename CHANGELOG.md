@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.5] - 2026-03-20
+
+### Added
+
+- capability-aware MCP introspection with `sxmc stdio --describe` / `sxmc http --describe`
+- per-tool schema/help output with `--describe-tool`
+- explicit surface listing flags: `--list-tools`, `--list-prompts`, and `--list-resources`
+
+### Fixed
+
+- `--list` no longer fails on prompt-less MCP servers that return `-32601` for prompt listing
+- HTTP MCP integration tests now wait for server readiness instead of relying on fixed sleeps
+
+### Changed
+
+- MCP bridge clients now use paginated `list_all_*` helpers for fuller server discovery
+- release metadata and package docs now align to `0.1.5`
+
 ## [0.1.4] - 2026-03-20
 
 ### Added
@@ -96,4 +114,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 [0.1.2]: https://github.com/aihxp/sxmc/compare/v0.1.1...v0.1.2
 [0.1.3]: https://github.com/aihxp/sxmc/compare/v0.1.2...v0.1.3
 [0.1.4]: https://github.com/aihxp/sxmc/compare/v0.1.3...v0.1.4
+[0.1.5]: https://github.com/aihxp/sxmc/compare/v0.1.4...v0.1.5
 [0.1.0]: https://github.com/aihxp/sxmc/releases/tag/v0.1.0

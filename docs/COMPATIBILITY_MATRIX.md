@@ -7,7 +7,7 @@ It complements the transport-level smoke script in [`SMOKE_TESTS.md`](SMOKE_TEST
 
 ## Current Validation Snapshot
 
-Validated against: `sxmc 0.1.4`  
+Validated against: `sxmc 0.1.5`  
 Validation date: `2026-03-20`
 
 | Client / consumer | Local stdio | Remote HTTP MCP | Validation method | Status | Notes |
