@@ -132,10 +132,7 @@ fn cmd_skills_list(paths: &[PathBuf], json_output: bool) -> Result<()> {
     let mut skills = Vec::new();
 
     for dir in &skill_dirs {
-        let source = dir
-            .parent()
-            .and_then(|p| p.to_str())
-            .unwrap_or("unknown");
+        let source = dir.parent().and_then(|p| p.to_str()).unwrap_or("unknown");
         match parser::parse_skill(dir, source) {
             Ok(skill) => skills.push(skill),
             Err(e) => eprintln!("Warning: {}: {}", dir.display(), e),
@@ -204,10 +201,7 @@ fn cmd_skills_info(paths: &[PathBuf], name: &str) -> Result<()> {
     let skill_dirs = discovery::discover_skills(paths)?;
 
     for dir in &skill_dirs {
-        let source = dir
-            .parent()
-            .and_then(|p| p.to_str())
-            .unwrap_or("unknown");
+        let source = dir.parent().and_then(|p| p.to_str()).unwrap_or("unknown");
         if let Ok(skill) = parser::parse_skill(dir, source) {
             if skill.name == name {
                 println!("Name: {}", skill.name);
@@ -249,20 +243,18 @@ async fn cmd_skills_run(paths: &[PathBuf], name: &str, arguments: &[String]) -> 
     let skill_dirs = discovery::discover_skills(paths)?;
 
     for dir in &skill_dirs {
-        let source = dir
-            .parent()
-            .and_then(|p| p.to_str())
-            .unwrap_or("unknown");
+        let source = dir.parent().and_then(|p| p.to_str()).unwrap_or("unknown");
         if let Ok(skill) = parser::parse_skill(dir, source) {
             if skill.name == name {
                 let args_str = arguments.join(" ");
                 let mut body = skill.body.clone();
-                body = body.replace("$ARGUMENTS", &args_str);
 
                 for (i, arg) in arguments.iter().enumerate() {
                     body = body.replace(&format!("$ARGUMENTS[{}]", i), arg);
                     body = body.replace(&format!("${}", i), arg);
                 }
+
+                body = body.replace("$ARGUMENTS", &args_str);
 
                 println!("{}", body);
                 return Ok(());
