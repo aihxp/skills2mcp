@@ -50,7 +50,8 @@ impl SkillsServer {
 
     fn make_tool_name(skill_name: &str, script_name: &str) -> String {
         let stem = script_name.rsplit('.').last().unwrap_or(script_name);
-        format!("{}__{}",
+        format!(
+            "{}__{}",
             skill_name.replace('-', "_"),
             stem.replace('-', "_"),
         )
@@ -60,7 +61,10 @@ impl SkillsServer {
         let mut props = serde_json::Map::new();
         let mut args_obj = serde_json::Map::new();
         args_obj.insert("type".into(), "string".into());
-        args_obj.insert("description".into(), "Arguments to pass to the script".into());
+        args_obj.insert(
+            "description".into(),
+            "Arguments to pass to the script".into(),
+        );
         props.insert("args".into(), serde_json::Value::Object(args_obj));
 
         let mut schema = serde_json::Map::new();
@@ -102,7 +106,11 @@ impl ServerHandler for SkillsServer {
                 }
             }
 
-            Ok(ListToolsResult { tools, next_cursor: None, meta: None })
+            Ok(ListToolsResult {
+                tools,
+                next_cursor: None,
+                meta: None,
+            })
         }
     }
 
@@ -114,10 +122,9 @@ impl ServerHandler for SkillsServer {
         async move {
             let tool_name: &str = request.name.as_ref();
 
-            let (si, sci) = self
-                .tool_index
-                .get(tool_name)
-                .ok_or_else(|| McpError::invalid_params(format!("Unknown tool: {}", tool_name), None))?;
+            let (si, sci) = self.tool_index.get(tool_name).ok_or_else(|| {
+                McpError::invalid_params(format!("Unknown tool: {}", tool_name), None)
+            })?;
 
             let skill = &self.skills[*si];
             let script = &skill.scripts[*sci];
@@ -186,7 +193,11 @@ impl ServerHandler for SkillsServer {
                 })
                 .collect();
 
-            Ok(ListPromptsResult { prompts, next_cursor: None, meta: None })
+            Ok(ListPromptsResult {
+                prompts,
+                next_cursor: None,
+                meta: None,
+            })
         }
     }
 
@@ -196,10 +207,9 @@ impl ServerHandler for SkillsServer {
         _context: RequestContext<RoleServer>,
     ) -> impl std::future::Future<Output = Result<GetPromptResult, McpError>> + Send + '_ {
         async move {
-            let skill_idx = self
-                .skill_index
-                .get(&request.name)
-                .ok_or_else(|| McpError::invalid_params(format!("Unknown prompt: {}", request.name), None))?;
+            let skill_idx = self.skill_index.get(&request.name).ok_or_else(|| {
+                McpError::invalid_params(format!("Unknown prompt: {}", request.name), None)
+            })?;
 
             let skill = &self.skills[*skill_idx];
             let mut body = skill.body.clone();
@@ -218,10 +228,7 @@ impl ServerHandler for SkillsServer {
 
             body = body.replace("$ARGUMENTS", "");
 
-            let messages = vec![PromptMessage::new_text(
-                PromptMessageRole::User,
-                body,
-            )];
+            let messages = vec![PromptMessage::new_text(PromptMessageRole::User, body)];
 
             Ok(GetPromptResult::new(messages)
                 .with_description(skill.frontmatter.description.clone()))
@@ -247,7 +254,11 @@ impl ServerHandler for SkillsServer {
                 })
                 .collect();
 
-            Ok(ListResourcesResult { resources, next_cursor: None, meta: None })
+            Ok(ListResourcesResult {
+                resources,
+                next_cursor: None,
+                meta: None,
+            })
         }
     }
 
@@ -259,21 +270,21 @@ impl ServerHandler for SkillsServer {
         async move {
             let uri_str = request.uri.as_str();
 
-            let (si, ri) = self
-                .resource_index
-                .get(uri_str)
-                .ok_or_else(|| McpError::invalid_params(format!("Unknown resource: {}", uri_str), None))?;
+            let (si, ri) = self.resource_index.get(uri_str).ok_or_else(|| {
+                McpError::invalid_params(format!("Unknown resource: {}", uri_str), None)
+            })?;
 
             let reference = &self.skills[*si].references[*ri];
-            let content = std::fs::read_to_string(&reference.path)
-                .map_err(|e| McpError::internal_error(
+            let content = std::fs::read_to_string(&reference.path).map_err(|e| {
+                McpError::internal_error(
                     format!("Failed to read {}: {}", reference.path.display(), e),
                     None,
-                ))?;
+                )
+            })?;
 
-            Ok(ReadResourceResult::new(vec![
-                ResourceContents::text(content, uri_str),
-            ]))
+            Ok(ReadResourceResult::new(vec![ResourceContents::text(
+                content, uri_str,
+            )]))
         }
     }
 }

@@ -14,10 +14,7 @@ pub fn build_server(paths: &[PathBuf]) -> Result<SkillsServer> {
     let mut skills = Vec::new();
 
     for dir in &skill_dirs {
-        let source = dir
-            .parent()
-            .and_then(|p| p.to_str())
-            .unwrap_or("unknown");
+        let source = dir.parent().and_then(|p| p.to_str()).unwrap_or("unknown");
         match parser::parse_skill(dir, source) {
             Ok(skill) => {
                 eprintln!("[sxmc] Loaded skill: {}", skill.name);

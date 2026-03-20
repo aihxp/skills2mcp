@@ -94,15 +94,17 @@ mod tests {
         for tmp in [&personal, &project] {
             let skill_dir = tmp.path().join("shared-skill");
             fs::create_dir_all(&skill_dir).unwrap();
-            fs::write(skill_dir.join("SKILL.md"), "---\nname: shared-skill\n---\nBody").unwrap();
+            fs::write(
+                skill_dir.join("SKILL.md"),
+                "---\nname: shared-skill\n---\nBody",
+            )
+            .unwrap();
         }
 
         // Project comes after personal, so it wins
-        let result = discover_skills(&[
-            personal.path().to_path_buf(),
-            project.path().to_path_buf(),
-        ])
-        .unwrap();
+        let result =
+            discover_skills(&[personal.path().to_path_buf(), project.path().to_path_buf()])
+                .unwrap();
 
         assert_eq!(result.len(), 1);
         assert!(result[0].starts_with(project.path()));

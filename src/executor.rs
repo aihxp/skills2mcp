@@ -29,7 +29,9 @@ pub async fn execute_script(
     let result = timeout(Duration::from_secs(timeout_secs), cmd.output())
         .await
         .map_err(|_| SxmcError::TimeoutError(timeout_secs))?
-        .map_err(|e| SxmcError::ExecutionError(format!("Failed to run {}: {}", script_path.display(), e)))?;
+        .map_err(|e| {
+            SxmcError::ExecutionError(format!("Failed to run {}: {}", script_path.display(), e))
+        })?;
 
     Ok(ExecResult {
         stdout: String::from_utf8_lossy(&result.stdout).to_string(),

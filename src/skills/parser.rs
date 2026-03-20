@@ -17,7 +17,9 @@ pub fn split_frontmatter(content: &str) -> Result<(String, String)> {
 
     if let Some(end_pos) = rest.find("\n---") {
         let yaml = rest[..end_pos].to_string();
-        let body = rest[end_pos + 4..].trim_start_matches(['\r', '\n']).to_string();
+        let body = rest[end_pos + 4..]
+            .trim_start_matches(['\r', '\n'])
+            .to_string();
         Ok((yaml, body))
     } else {
         Err(SxmcError::ParseError(
@@ -42,10 +44,7 @@ pub fn parse_skill(skill_dir: &Path, source: &str) -> Result<Skill> {
     };
 
     // Resolve ${CLAUDE_SKILL_DIR} in body
-    let body = body.replace(
-        "${CLAUDE_SKILL_DIR}",
-        skill_dir.to_str().unwrap_or(""),
-    );
+    let body = body.replace("${CLAUDE_SKILL_DIR}", skill_dir.to_str().unwrap_or(""));
 
     // Scan for scripts
     let scripts = scan_scripts(skill_dir)?;
@@ -101,11 +100,7 @@ fn scan_references(skill_dir: &Path, skill_name: &str) -> Result<Vec<SkillRefere
             if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
                 let name = name.to_string();
                 let uri = format!("skill://{}/references/{}", skill_name, name);
-                refs.push(SkillReference {
-                    name,
-                    path,
-                    uri,
-                });
+                refs.push(SkillReference { name, path, uri });
             }
         }
     }
@@ -189,7 +184,10 @@ mod tests {
         assert_eq!(skill.frontmatter.description, "A test skill");
         assert_eq!(skill.scripts.len(), 1);
         assert_eq!(skill.references.len(), 1);
-        assert_eq!(skill.references[0].uri, "skill://my-skill/references/guide.md");
+        assert_eq!(
+            skill.references[0].uri,
+            "skill://my-skill/references/guide.md"
+        );
     }
 
     #[test]
