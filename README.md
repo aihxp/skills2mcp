@@ -1,6 +1,6 @@
 # sxmc
 
-AI-agnostic Skills x MCP x CLI — a single Rust binary that turns skills into MCP servers, MCP servers into CLI commands, and any API into a CLI.
+One Rust binary. Skills become MCP servers. MCP servers become CLI commands. Any API becomes a CLI.
 
 [Crates.io](https://crates.io/crates/sxmc) | [docs.rs](https://docs.rs/sxmc/latest/sxmc/)
 
