@@ -1,6 +1,6 @@
 # End-to-end validation report
 
-This document records a full validation pass of **sxmc** (skills, MCP stdio bridge, OpenAPI `api` command, scan, bake) and contrasts **crates.io v0.1.1** behavior with fixes shipped in **crates.io v0.1.2** and on `master`.
+This document records a full validation pass of **sxmc** (skills, MCP stdio bridge, OpenAPI `api` command, scan, bake) and contrasts **crates.io v0.1.1** behavior with fixes shipped in **v0.1.2+** through **v0.1.3** on `main`.
 
 ## Environment (representative)
 
@@ -88,13 +88,21 @@ cargo install sxmc --force   # → sxmc 0.1.2
 - **`cargo test`** on `origin/master` at validation time: **61 + 22 + 1** tests, all passed.
 - **16 manual E2E checks** against `~/.cargo/bin/sxmc` (version line reported **0.1.2**): all passed, including MCP script tool **without** `--paths`, **`api getInventory`** (no client “builder error”), **`api findPetsByStatus`**, and fixture `--paths` flows.
 
+### Post-release: **crates.io v0.1.3** (2026-03-20)
+
+Re-checked after **`cargo install sxmc --force` → 0.1.3**:
+
+- **`cargo test`:** **65** library + **28** integration + **1** doc = **94** tests, all passed.
+- **Automated CLI timings:** see [BENCHMARK_RUN_v0.1.3.md](BENCHMARK_RUN_v0.1.3.md) (median ms, `scripts/benchmark_cli.sh`).
+- **Release notes:** [CHANGELOG.md](../CHANGELOG.md) `[0.1.3]` — MCP bridge `--prompt` / `--resource`, safer stdio spawn, TOON-style `--format toon`, `/healthz` inventory, etc.
+
 ## External service note: Petstore `getInventory`
 
 Calling `getInventory` against the public Petstore may return **HTTP 500** or an error JSON body depending on load and server state. That indicates the **HTTP client successfully built and sent a request** (unlike the “builder error” above). Prefer **`findPetsByStatus`** for a stable positive response when smoke-testing the OpenAPI path.
 
 ## Installing the validated build locally
 
-From crates.io (recommended; includes the fixes as of **v0.1.2**):
+From crates.io (recommended; latest validated in this doc: **v0.1.3**):
 
 ```bash
 cargo install sxmc
@@ -104,7 +112,7 @@ From a git checkout:
 
 ```bash
 git fetch origin
-git checkout master
+git checkout main
 cargo install --path . --force
 ```
 

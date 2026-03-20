@@ -27,17 +27,19 @@ those keys into a tabular layout that is easier for both humans and models to sc
 
 ## Representative wall-clock results (CLI)
 
-Environment: **Linux x86_64**, **sxmc 0.1.2**, **5 runs**, **median milliseconds**. Commands hit public Petstore where noted (network variance is expected).
+Latest captured numbers: **[BENCHMARK_RUN_v0.1.3.md](BENCHMARK_RUN_v0.1.3.md)** (**sxmc 0.1.3**, **5 runs**, **median ms**, `scripts/benchmark_cli.sh`).
 
-| Scenario | Command / step | Median (ms) | Notes |
-|----------|------------------|------------|--------|
-| A | `sxmc stdio "sxmc serve" …` → skill script tool | **~18** | Local subprocess + script; negligible vs human/LLM |
-| B | `sxmc api <petstore openapi> --list` | **~700–850** | Dominated by fetch + parse + network |
-| B | `sxmc api … findPetsByStatus` | **~1200–1300** | Same; not CPU-bound on sxmc |
-| B | `curl` to known Petstore URL only | **~600** | Lower bound: no spec in process |
-| C | `sxmc stdio "sxmc serve --paths …/tests/fixtures" --list` | **~10** | Nested MCP bridge |
-| D | `sxmc scan --paths … --skill malicious-skill` | **~11** | Exits non-zero when findings exist (by design) |
-| Micro | Local OpenAPI file + tiny `http.server` + `sxmc api … listPets` | **~14** | Reduces internet jitter for method comparison |
+Environment: **Linux x86_64**. Petstore steps are **network-dominated**.
+
+| Scenario | Command / step | Median (ms) @ v0.1.3 | Notes |
+|----------|------------------|----------------------|--------|
+| A | `sxmc stdio "sxmc serve --paths tests/fixtures" …` → `skill_with_scripts__hello` | **~11** | Fixture script; user-global skills can be a few ms higher |
+| B | `sxmc api <petstore openapi> --list` | **~715** | Fetch + parse + network |
+| B | `sxmc api … findPetsByStatus` | **~1024** | Same |
+| B | `curl` to known Petstore URL only | **~448** | Lower bound: no spec in process |
+| C | `sxmc stdio "sxmc serve --paths …/tests/fixtures" --list` | **~11** | Nested MCP bridge |
+| D | `sxmc scan --paths … --skill malicious-skill` | **~12** | Exits non-zero when findings exist (by design) |
+| Micro | Local OpenAPI + ephemeral HTTP + `sxmc api … listPets` | **~15** | Reduces WAN jitter |
 
 **Takeaway:** sxmc adds **small** local overhead on top of I/O. The **big win** is usually **fewer agent turns and smaller prompts**, not microseconds saved on disk.
 
@@ -59,12 +61,13 @@ See [E2E_VALIDATION_REPORT.md](E2E_VALIDATION_REPORT.md) for release validation.
 
 1. Runs each command **N** times (e.g. 5).
 2. Records **median** wall time (mean is ok; median resists Petstore flakes).
-3. Uses a **local OpenAPI + stdlib `http.server`** slice to separate client logic from WAN variance.
+3. Uses a **local OpenAPI + tiny HTTP server** slice to separate client logic from WAN variance.
 
-Contributions welcome if we add `scripts/benchmark_cli.sh` to the repo later.
+Use **`scripts/benchmark_cli.sh`** in this repository to regenerate timings.
 
 ## Related docs
 
+- [BENCHMARK_RUN_v0.1.3.md](BENCHMARK_RUN_v0.1.3.md) — v0.1.3 crates.io + `cargo test` counts
 - [E2E_VALIDATION_REPORT.md](E2E_VALIDATION_REPORT.md) — v0.1.1 vs v0.1.2 validation
 - [SMOKE_TESTS.md](SMOKE_TESTS.md) — MCP transport smoke tests
 - [CLIENTS.md](CLIENTS.md) — Cursor / Codex / etc.
