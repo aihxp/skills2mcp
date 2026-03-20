@@ -411,6 +411,35 @@ fn parse_optional_secret(secret: Option<String>) -> Result<Option<String>> {
     secret.map(|value| resolve_secret(&value)).transpose()
 }
 
+fn is_capability_not_supported(error: &sxmc::error::SxmcError) -> bool {
+    match error {
+        sxmc::error::SxmcError::McpError(message) => {
+            let lower = message.to_ascii_lowercase();
+            lower.contains("-32601")
+                || lower.contains("method not found")
+                || lower.contains("not supported")
+        }
+        _ => false,
+    }
+}
+
+async fn list_optional_surface<T, F>(label: &str, list_future: F) -> Result<Vec<T>>
+where
+    F: std::future::Future<Output = Result<Vec<T>>>,
+{
+    match list_future.await {
+        Ok(items) => Ok(items),
+        Err(error) if is_capability_not_supported(&error) => {
+            eprintln!(
+                "[sxmc] Skipping {} listing because the MCP server does not advertise that capability.",
+                label
+            );
+            Ok(Vec::new())
+        }
+        Err(error) => Err(error),
+    }
+}
+
 fn parse_source_type(source_type: &str) -> SourceType {
     match source_type {
         "stdio" => SourceType::Stdio,
@@ -520,13 +549,14 @@ async fn main() -> anyhow::Result<()> {
                 let tools = client.list_tools().await?;
                 println!("{}", output::format_tool_list(&tools, search.as_deref()));
 
-                let prompts = client.list_prompts().await?;
+                let prompts = list_optional_surface("prompt", client.list_prompts()).await?;
                 if !prompts.is_empty() {
                     println!();
                     println!("{}", output::format_prompt_list(&prompts));
                 }
 
-                let resources = client.list_resources().await?;
+                let resources =
+                    list_optional_surface("resource", client.list_resources()).await?;
                 if !resources.is_empty() {
                     println!();
                     println!("{}", output::format_resource_list(&resources));
@@ -576,13 +606,14 @@ async fn main() -> anyhow::Result<()> {
                 let tools = client.list_tools().await?;
                 println!("{}", output::format_tool_list(&tools, search.as_deref()));
 
-                let prompts = client.list_prompts().await?;
+                let prompts = list_optional_surface("prompt", client.list_prompts()).await?;
                 if !prompts.is_empty() {
                     println!();
                     println!("{}", output::format_prompt_list(&prompts));
                 }
 
-                let resources = client.list_resources().await?;
+                let resources =
+                    list_optional_surface("resource", client.list_resources()).await?;
                 if !resources.is_empty() {
                     println!();
                     println!("{}", output::format_resource_list(&resources));
@@ -926,6 +957,48 @@ fn cmd_skills_list(paths: &[PathBuf], json_output: bool) -> Result<()> {
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{is_capability_not_supported, list_optional_surface};
+    use sxmc::error::SxmcError;
+
+    #[test]
+    fn detects_json_rpc_method_not_found_as_optional_capability_gap() {
+        let error = SxmcError::McpError(
+            "list_prompts failed: JSON-RPC error -32601: Method not found".into(),
+        );
+        assert!(is_capability_not_supported(&error));
+    }
+
+    #[test]
+    fn detects_textual_not_supported_errors() {
+        let error = SxmcError::McpError("list_resources failed: capability not supported".into());
+        assert!(is_capability_not_supported(&error));
+    }
+
+    #[test]
+    fn does_not_hide_real_failures() {
+        let error = SxmcError::McpError("list_prompts failed: connection reset".into());
+        assert!(!is_capability_not_supported(&error));
+    }
+
+    #[tokio::test]
+    async fn optional_surface_returns_empty_when_capability_is_missing() {
+        let items = list_optional_surface::<String, _>(
+            "prompt",
+            async {
+                Err(SxmcError::McpError(
+                    "list_prompts failed: JSON-RPC error -32601: Method not found".into(),
+                ))
+            },
+        )
+        .await
+        .unwrap();
+
+        assert!(items.is_empty());
+    }
 }
 
 fn cmd_skills_info(paths: &[PathBuf], name: &str) -> Result<()> {
