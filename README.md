@@ -227,6 +227,17 @@ cargo run -- skills list --paths tests/fixtures
 cargo run -- scan --paths tests/fixtures
 ```
 
+## Acknowledgements
+
+sxmc was inspired by and builds upon ideas from:
+
+- [mcp2cli](https://github.com/2aspect/mcp2cli) — the original Python MCP-to-CLI bridge that sxmc reimplements in Rust with skills as a first-class concept
+- [skill-issue](https://github.com/therealsmallwolf/skill-issue) — skill security scanning patterns
+- [skillfile](https://github.com/AidanTilgner/skillfile) — declarative skill manifest concepts
+- [skill-radar](https://github.com/nicobailey/skill-radar) — session analysis and skill suggestion patterns
+- [Mcpwn](https://github.com/Teycir/Mcpwn) — MCP server security analysis techniques
+- [rmcp](https://github.com/nicepkg/rmcp) — the official Rust MCP SDK powering the protocol layer
+
 ## License
 
 MIT
