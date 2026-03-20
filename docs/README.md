@@ -12,9 +12,10 @@ Additional documentation for sxmc developers and maintainers.
 | [DISTRIBUTION.md](DISTRIBUTION.md) | Distribution channels: npm wrapper, Homebrew formula, asset naming |
 | [SMOKE_TESTS.md](SMOKE_TESTS.md) | Startup sanity and client smoke procedures (automated and manual) |
 | [E2E_VALIDATION_REPORT.md](E2E_VALIDATION_REPORT.md) | E2E validation: v0.1.1 regressions, 0.1.2 fixes, and the manual test matrix |
-| [BENCHMARK_RUN_v0.1.5.md](BENCHMARK_RUN_v0.1.5.md) | v0.1.5 crates.io benchmark + `cargo test` counts + `scripts/benchmark_cli.sh` |
-| [BENCHMARK_RUN_v0.1.3.md](BENCHMARK_RUN_v0.1.3.md) | Prior benchmark capture (v0.1.3) |
-| [REAL_WORLD_SKILLS_AND_MCP_REPORT.md](REAL_WORLD_SKILLS_AND_MCP_REPORT.md) | Five real skills + five npm MCP servers; optional prompts/resources on `stdio --list` (v0.1.5) |
+| [BENCHMARK_RUN_v0.1.6.md](BENCHMARK_RUN_v0.1.6.md) | v0.1.6 crates.io benchmark + `cargo test` counts + `scripts/benchmark_cli.sh` |
+| [BENCHMARK_RUN_v0.1.5.md](BENCHMARK_RUN_v0.1.5.md) | Prior benchmark capture (v0.1.5) |
+| [BENCHMARK_RUN_v0.1.3.md](BENCHMARK_RUN_v0.1.3.md) | Older benchmark capture (v0.1.3) |
+| [REAL_WORLD_SKILLS_AND_MCP_REPORT.md](REAL_WORLD_SKILLS_AND_MCP_REPORT.md) | Five skills + five npm MCPs; promptless `--list`; multi-invocation / “dialog” notes (v0.1.6) |
 | [VALUE_AND_BENCHMARK_FINDINGS.md](VALUE_AND_BENCHMARK_FINDINGS.md) | Value proposition, benchmark scope, startup benchmark helper, token estimation guidance |
 | [MCP_TO_CLI_VERIFICATION.md](MCP_TO_CLI_VERIFICATION.md) | MCP → CLI (`stdio` / `http`) verification notes, bridge contract, and manual checks |
 | [LAUNCH.md](LAUNCH.md) | Release notes template, pitch copy, and announcement drafts |

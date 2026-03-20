@@ -1,7 +1,7 @@
 # Real-world skills & MCP servers — integration report
 
 **Date:** 2026-03-20  
-**sxmc:** `0.1.5` (`cargo` / `sxmc --version`)  
+**sxmc:** `0.1.6` (`cargo` / `sxmc --version`)  
 **Host:** Linux x86_64  
 **Node:** v22.x (`npx` available for official MCP npm packages)
 
@@ -94,7 +94,7 @@ sxmc stdio "npx -y <package> [args…]" --list
 **Timeout:** 120s per server (first `npx` install can be slow).  
 **Network:** required for npm.
 
-### 2.2 Results summary (**sxmc 0.1.5**)
+### 2.2 Results summary (**sxmc 0.1.6**)
 
 | # | Package / command | Tools listed? | Prompts / resources | Exit | Notes |
 |---|-------------------|---------------|---------------------|------|--------|
@@ -125,9 +125,33 @@ sxmc stdio "npx -y <package> [args…]" --list
 
   returned: `The sum of 2 and 3 is 5.` (**success**).
 
-### 2.4 Follow-up test (`server-memory`)
+### 2.4 Zero-argument tools (`read_graph`, `list_allowed_directories`, …)
 
-Calling `read_graph` with guessed CLI args produced **`-32602` input validation** (arguments not passed as the server expects). This is **normal** when hand-testing; it shows the **session stays alive** for `call_tool` after connect.
+Some npm MCP servers validate tool arguments as a **JSON object**. With **sxmc**’s `key=value` CLI parsing, **no arguments** after the tool name means the client may **omit** the arguments object entirely, which surfaces as **input validation** errors from the server (e.g. *expected object, received undefined*) even though **exit code stays 0**.
+
+**Workaround (manual tests):** pass a disposable empty object so an object is always sent:
+
+```bash
+sxmc stdio "npx -y @modelcontextprotocol/server-memory" read_graph _={} --pretty
+sxmc stdio "npx -y @modelcontextprotocol/server-filesystem /tmp" list_allowed_directories _={} --pretty
+```
+
+(`_` is ignored by the server schema; only `{}` matters.)
+
+### 2.5 “Dialog” / multi-step use on **promptless** MCP servers
+
+**What `sxmc stdio` does:** each invocation **spawns one MCP server subprocess**, runs **one** user-facing action (e.g. `--list`, `call_tool`, `--describe`), then **tears the session down**. There is **no built-in REPL** for multiple tool calls inside a **single** long-lived MCP session.
+
+**What we tested (v0.1.6):**
+
+1. **Chained invocations (separate processes)** — useful to confirm promptless servers keep working after `--list` and for scripts/CI:
+   - **`server-sequential-thinking`:** two `sequentialthinking` calls in a row (different `sxmc` processes) → both **exit 0**; JSON shows `thoughtHistoryLength: 1` each time because **state does not carry** between invocations.
+   - **`server-memory`:** two `read_graph _={}` calls → both **exit 0**, empty graph each time (again, **new server** each run).
+   - **`server-filesystem`:** `list_allowed_directories _={}` then `list_directory path=/tmp` → both **exit 0**.
+
+2. **True multi-turn state** (thought history, in-memory graph, etc.) requires a **long-lived MCP host** (IDE agent, custom client, or a small script using an MCP SDK) — **not** multiple bare `sxmc stdio` calls.
+
+**Conclusion:** **Promptless MCPs work fine for repeated one-shot tool calls via sxmc**; treat **multi-step “conversation”** as **orchestration outside sxmc** unless/until a persistent-session CLI mode exists.
 
 ---
 
@@ -138,7 +162,8 @@ Calling `read_graph` with guessed CLI args produced **`-32602` input validation*
 | **Load diverse real skills** | **Works** — symlinked multi-root bundle is OK. |
 | **`skills list` / `info` / `run` / `scan`** | **Works** for all five; `run` is **prompt dump**, not automation. |
 | **Serve 5 skills as MCP** | **Works** — prompts + hybrid tools + resources as designed. |
-| **Bridge official MCP servers** | **Works** for **`--list`** on the five tested servers — **exit 0** with tools listed (**v0.1.5**). |
+| **Bridge official MCP servers** | **Works** for **`--list`** on the five tested servers — **exit 0** with tools listed (**v0.1.5+**). |
+| **Multi-step / “dialog” on promptless MCP** | **Repeated `sxmc stdio … tool` calls work** (each is a **new** session). **Stateful** chains need a long-lived host (§2.5). |
 | **Wrong npm package name** | **User error surface** — `server-fetch` 404; verify package names on npm. |
 
 ---
@@ -148,6 +173,7 @@ Calling `read_graph` with guessed CLI args produced **`-32602` input validation*
 1. ~~**MCP client `list`:** If `list_prompts` returns **`-32601`**, treat as **“no prompts”** and exit **0**~~ — **Done in v0.1.5** (optional-surface handling + advertised-capability skip).
 2. **Docs:** Call out that **`@modelcontextprotocol/server-everything`** is the easiest **known-good** server for full **tools + prompts + resources** demos.
 3. **Docs:** Link to npm scope **`@modelcontextprotocol/`** package list; **`server-fetch`** name may be wrong or unpublished.
+4. **Product:** For tools that declare **no parameters**, consider always sending **`{}`** as arguments when the CLI passes none, to match strict Zod/json-schema validators on popular npm servers.
 
 ---
 
@@ -166,6 +192,13 @@ sxmc stdio "sxmc serve --paths /tmp/sxmc-realworld-skills" --list
 sxmc stdio "npx -y @modelcontextprotocol/server-everything" --list
 sxmc stdio "npx -y @modelcontextprotocol/server-everything" get-sum a=2 b=3 --pretty
 sxmc stdio "npx -y @modelcontextprotocol/server-memory" --list   # expect exit 0 (tools + skip notices)
+
+# Promptless “dialog” (separate sxmc processes; see §2.5)
+sxmc stdio "npx -y @modelcontextprotocol/server-sequential-thinking" \
+  sequentialthinking thought="Step A" thoughtNumber=1 totalThoughts=2 nextThoughtNeeded=true --pretty
+sxmc stdio "npx -y @modelcontextprotocol/server-sequential-thinking" \
+  sequentialthinking thought="Step B" thoughtNumber=2 totalThoughts=2 nextThoughtNeeded=false --pretty
+sxmc stdio "npx -y @modelcontextprotocol/server-memory" read_graph _={} --pretty
 ```
 
 ---
@@ -174,5 +207,6 @@ sxmc stdio "npx -y @modelcontextprotocol/server-memory" --list   # expect exit 0
 
 - [MCP_TO_CLI_VERIFICATION.md](MCP_TO_CLI_VERIFICATION.md)
 - [VALUE_AND_BENCHMARK_FINDINGS.md](VALUE_AND_BENCHMARK_FINDINGS.md)
+- [BENCHMARK_RUN_v0.1.6.md](BENCHMARK_RUN_v0.1.6.md)
 - [BENCHMARK_RUN_v0.1.5.md](BENCHMARK_RUN_v0.1.5.md)
 - [CLIENTS.md](CLIENTS.md)

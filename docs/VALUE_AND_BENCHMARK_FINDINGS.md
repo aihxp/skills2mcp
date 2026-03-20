@@ -48,8 +48,8 @@ those keys into a tabular layout that is easier for both humans and models to sc
 
 ## Representative wall-clock results (CLI)
 
-Latest captured numbers: **[BENCHMARK_RUN_v0.1.5.md](BENCHMARK_RUN_v0.1.5.md)** (**sxmc 0.1.5**, **5 runs**, **median ms**, `scripts/benchmark_cli.sh`).  
-Prior run: [BENCHMARK_RUN_v0.1.3.md](BENCHMARK_RUN_v0.1.3.md).
+Latest captured numbers: **[BENCHMARK_RUN_v0.1.6.md](BENCHMARK_RUN_v0.1.6.md)** (**sxmc 0.1.6**, **5 runs**, **median ms**, `scripts/benchmark_cli.sh`).  
+Prior runs: [BENCHMARK_RUN_v0.1.5.md](BENCHMARK_RUN_v0.1.5.md), [BENCHMARK_RUN_v0.1.3.md](BENCHMARK_RUN_v0.1.3.md).
 
 These timings reflect the default one-shot command paths. The optional
 development feature `sxmc serve --watch` is intentionally outside this table;
@@ -58,12 +58,12 @@ startup/bridge path that the benchmarks are describing.
 
 Environment: **Linux x86_64**. Petstore steps are **network-dominated**.
 
-| Scenario | Command / step | Median (ms) @ v0.1.5 | Notes |
+| Scenario | Command / step | Median (ms) @ v0.1.6 | Notes |
 |----------|------------------|----------------------|--------|
-| A | `sxmc stdio "sxmc serve --paths tests/fixtures" …` → `skill_with_scripts__hello` | **~10** | Fixture script; user-global skills can be a few ms higher |
-| B | `sxmc api <petstore openapi> --list` | **~614** | Fetch + parse + network (varies by run) |
-| B | `sxmc api … findPetsByStatus` | **~1151** | Same |
-| B | `curl` to known Petstore URL only | **~510** | Lower bound: no spec in process |
+| A | `sxmc stdio "sxmc serve --paths tests/fixtures" …` → `skill_with_scripts__hello` | **~11** | Fixture script; user-global skills can be a few ms higher |
+| B | `sxmc api <petstore openapi> --list` | **~613** | Fetch + parse + network (varies by run) |
+| B | `sxmc api … findPetsByStatus` | **~1227** | Same |
+| B | `curl` to known Petstore URL only | **~409** | Lower bound: no spec in process |
 | C | `sxmc stdio "sxmc serve --paths …/tests/fixtures" --list` | **~10** | Nested MCP bridge |
 | D | `sxmc scan --paths … --skill malicious-skill` | **~11** | Exits non-zero when findings exist (by design) |
 | Micro | Local OpenAPI + ephemeral HTTP + `sxmc api … listPets` | **~14** | Reduces WAN jitter |
@@ -105,8 +105,9 @@ that can run the same way on Linux, macOS, and Windows.
 
 ## Related docs
 
-- [BENCHMARK_RUN_v0.1.5.md](BENCHMARK_RUN_v0.1.5.md) — v0.1.5 crates.io + `cargo test` counts
-- [BENCHMARK_RUN_v0.1.3.md](BENCHMARK_RUN_v0.1.3.md) — prior captured run
+- [BENCHMARK_RUN_v0.1.6.md](BENCHMARK_RUN_v0.1.6.md) — v0.1.6 crates.io + `cargo test` counts
+- [BENCHMARK_RUN_v0.1.5.md](BENCHMARK_RUN_v0.1.5.md) — prior captured run
+- [BENCHMARK_RUN_v0.1.3.md](BENCHMARK_RUN_v0.1.3.md) — older capture
 - [E2E_VALIDATION_REPORT.md](E2E_VALIDATION_REPORT.md) — v0.1.1 vs v0.1.2 validation
 - [SMOKE_TESTS.md](SMOKE_TESTS.md) — MCP transport smoke tests
 - [CLIENTS.md](CLIENTS.md) — Cursor / Codex / etc.
