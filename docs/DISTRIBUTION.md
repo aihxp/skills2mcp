@@ -10,6 +10,13 @@
 The Rust crate and GitHub Release assets remain canonical. The npm wrapper and
 Homebrew formula are convenience distribution channels layered on top.
 
+Current channel status:
+
+- crates.io: published and canonical
+- GitHub Releases: published and canonical
+- npm wrapper: packaging-ready, publish when you want a JS-native install path
+- Homebrew formula: ready to promote into a real tap
+
 Current repo alignment:
 
 - crate version: `0.1.4`

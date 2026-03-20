@@ -74,7 +74,11 @@ cargo build --release
 ```
 
 Additional setup and client-specific configuration examples are in
-[`docs/CLIENTS.md`](docs/CLIENTS.md). Release and publishing steps are in
+[`docs/CLIENTS.md`](docs/CLIENTS.md). The maintained compatibility ledger is in
+[`docs/COMPATIBILITY_MATRIX.md`](docs/COMPATIBILITY_MATRIX.md), hosted deployment
+guidance is in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md), and connection
+examples are in [`docs/CONNECTION_EXAMPLES.md`](docs/CONNECTION_EXAMPLES.md).
+Release and publishing steps are in
 [`docs/RELEASING.md`](docs/RELEASING.md). Distribution-channel notes are in
 [`docs/DISTRIBUTION.md`](docs/DISTRIBUTION.md), smoke checks are in
 [`docs/SMOKE_TESTS.md`](docs/SMOKE_TESTS.md), and launch copy is in
@@ -149,6 +153,8 @@ This lets `sxmc` work well with local stdio-based MCP clients such as Codex,
 Cursor, Gemini CLI, and similar coding agents.
 It can also be hosted as a remote streamable HTTP MCP server for clients that
 consume HTTP MCP endpoints.
+The dated validation status for those clients lives in
+[`docs/COMPATIBILITY_MATRIX.md`](docs/COMPATIBILITY_MATRIX.md).
 
 ### Any MCP server as CLI
 
@@ -204,6 +210,8 @@ sxmc http http://127.0.0.1:8000/mcp \
 For hosted `/mcp` endpoints, prefer `--require-header` so remote access is not
 left open by default. For single-token hosted deployments, `--bearer-token` is
 usually the friendlier option.
+Hosted deployment guidance, reverse-proxy notes, and operational checks are in
+[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
 For `sxmc stdio`, you can now pass either shell-style quoting or a JSON-array
 command spec such as `["sxmc","serve","--paths","tests/fixtures"]`. For nested
