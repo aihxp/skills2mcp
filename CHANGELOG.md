@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.2] - 2026-03-20
+
+### Added
+
+- Regression coverage for project-local `.claude/skills` when bridged through
+  `sxmc stdio "sxmc serve"`
+- End-to-end validation notes for the `0.1.1` regressions and `0.1.2` fixes
+- Patch release notes and release guidance for the `0.1.2` line
+
+### Fixed
+
+- Project-local skill script execution now resolves to absolute paths without
+  requiring an explicit `--paths`
+- OpenAPI 3 specs with relative `servers[0].url` values now resolve correctly
+  against the spec source URL
+- The new project-local skill regression test now uses OS-native temp scripts,
+  so CI stays green on Windows as well as Unix
+
 ## [0.1.1] - 2026-03-20
 
 ### Added
@@ -42,4 +60,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - API auth flow alignment with CLI docs
 
 [0.1.1]: https://github.com/aihxp/sxmc/compare/v0.1.0...v0.1.1
+[0.1.2]: https://github.com/aihxp/sxmc/compare/v0.1.1...v0.1.2
 [0.1.0]: https://github.com/aihxp/sxmc/releases/tag/v0.1.0
