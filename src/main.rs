@@ -582,6 +582,22 @@ enum ScaffoldAction {
         #[arg(long, value_enum, default_value = "preview")]
         mode: ArtifactMode,
     },
+
+    /// Generate an optional llms.txt export from a CLI surface profile
+    #[command(name = "llms-txt")]
+    LlmTxt {
+        /// Path to a JSON profile file
+        #[arg(long = "from-profile")]
+        from_profile: PathBuf,
+
+        /// Root directory for generated or applied artifacts
+        #[arg(long)]
+        root: Option<PathBuf>,
+
+        /// Output mode
+        #[arg(long, value_enum, default_value = "preview")]
+        mode: ArtifactMode,
+    },
 }
 
 #[derive(Subcommand)]
@@ -1719,7 +1735,7 @@ fn require_cli_ai_client(
             "Single-host CLI->AI generation requires --client".into(),
         )),
         (AiCoverage::Full, Some(client)) => Ok(client),
-        (AiCoverage::Full, None) => Ok(AiClientProfile::OpenaiCodex),
+        (AiCoverage::Full, None) => Ok(AiClientProfile::ClaudeCode),
     }
 }
 
@@ -1734,6 +1750,18 @@ fn validate_full_apply_hosts(
         ));
     }
     Ok(())
+}
+
+fn ai_client_display_name(client: AiClientProfile) -> &'static str {
+    match client {
+        AiClientProfile::ClaudeCode => "Claude Code",
+        AiClientProfile::Cursor => "Cursor",
+        AiClientProfile::GeminiCli => "Gemini CLI",
+        AiClientProfile::GithubCopilot => "GitHub Copilot",
+        AiClientProfile::OpenaiCodex => "OpenAI/Codex",
+        AiClientProfile::GenericStdioMcp => "Generic stdio MCP",
+        AiClientProfile::GenericHttpMcp => "Generic HTTP MCP",
+    }
 }
 
 fn resolve_cli_ai_init_artifacts(
@@ -1751,12 +1779,13 @@ fn resolve_cli_ai_init_artifacts(
             let client = require_cli_ai_client(coverage, client)?;
             let profile_artifact = cli_surfaces::generate_profile_artifact(profile, root)?;
             let agent_doc = cli_surfaces::generate_agent_doc_artifact(profile, client, root);
-            let client_config =
-                cli_surfaces::generate_client_config_artifact(profile, client, root, skills_path);
-            Ok((
-                vec![profile_artifact, agent_doc, client_config],
-                vec![client],
-            ))
+            let mut artifacts = vec![profile_artifact, agent_doc];
+            if let Some(client_config) =
+                cli_surfaces::generate_client_config_artifact(profile, client, root, skills_path)
+            {
+                artifacts.push(client_config);
+            }
+            Ok((artifacts, vec![client]))
         }
         AiCoverage::Full => Ok((
             cli_surfaces::generate_full_coverage_init_artifacts(profile, root, skills_path)?,
@@ -1809,15 +1838,15 @@ fn resolve_cli_ai_client_config_artifacts(
     match coverage {
         AiCoverage::Single => {
             let client = require_cli_ai_client(coverage, client)?;
-            Ok((
-                vec![cli_surfaces::generate_client_config_artifact(
-                    profile,
-                    client,
-                    root,
-                    skills_path,
-                )],
-                vec![client],
-            ))
+            let artifact =
+                cli_surfaces::generate_client_config_artifact(profile, client, root, skills_path)
+                    .ok_or_else(|| {
+                    sxmc::error::SxmcError::Other(format!(
+                        "{} does not have a native MCP config target in sxmc",
+                        ai_client_display_name(client)
+                    ))
+                })?;
+            Ok((vec![artifact], vec![client]))
         }
         AiCoverage::Full => {
             let mut artifacts = Vec::new();
@@ -1825,16 +1854,19 @@ fn resolve_cli_ai_client_config_artifacts(
                 AiClientProfile::ClaudeCode,
                 AiClientProfile::Cursor,
                 AiClientProfile::GeminiCli,
+                AiClientProfile::GithubCopilot,
                 AiClientProfile::OpenaiCodex,
                 AiClientProfile::GenericStdioMcp,
                 AiClientProfile::GenericHttpMcp,
             ] {
-                artifacts.push(cli_surfaces::generate_client_config_artifact(
+                if let Some(artifact) = cli_surfaces::generate_client_config_artifact(
                     profile,
                     client,
                     root,
                     skills_path,
-                ));
+                ) {
+                    artifacts.push(artifact);
+                }
             }
             Ok((artifacts, hosts.to_vec()))
         }
@@ -2461,6 +2493,17 @@ async fn main() -> anyhow::Result<()> {
                 let artifacts =
                     cli_surfaces::generate_mcp_wrapper_artifacts(&profile, &root, &output_dir)?;
                 let outcomes = cli_surfaces::materialize_artifacts(&artifacts, mode, &root)?;
+                print_write_outcomes(&outcomes);
+            }
+            ScaffoldAction::LlmTxt {
+                from_profile,
+                root,
+                mode,
+            } => {
+                let root = resolve_generation_root(root)?;
+                let profile = cli_surfaces::load_profile(&from_profile)?;
+                let artifact = cli_surfaces::generate_llms_txt_artifact(&profile, &root);
+                let outcomes = cli_surfaces::materialize_artifacts(&[artifact], mode, &root)?;
                 print_write_outcomes(&outcomes);
             }
         },

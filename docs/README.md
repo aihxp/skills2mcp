@@ -7,6 +7,7 @@ Additional documentation for sxmc developers and maintainers.
 | [USAGE.md](USAGE.md) | Install, quick start, MCP workflows, client setup, and agent guidance |
 | [OPERATIONS.md](OPERATIONS.md) | Hosted deployment, release process, and distribution notes |
 | [VALIDATION.md](VALIDATION.md) | Test, smoke, compatibility, and benchmark summary |
+| [CLI_TO_AI_COMPATIBILITY.md](CLI_TO_AI_COMPATIBILITY.md) | Host-by-host `CLI -> AI` coverage matrix for startup docs, native config, and apply behavior |
 | [VALIDATION_RUN_v0.2.0.md](VALIDATION_RUN_v0.2.0.md) | Maintainer validation for **0.2.0**: tests, smoke, benchmarks, JSON/stderr, MCP→CLI, `sxmc mcp`, `mcp session`, Cursor-style stdio check |
 | [VALIDATION_RUN_v0.1.9.md](VALIDATION_RUN_v0.1.9.md) | Prior snapshot for `0.1.9` |
 | [VALIDATION_RUN_v0.1.8.md](VALIDATION_RUN_v0.1.8.md) | Prior snapshot for `0.1.8` |

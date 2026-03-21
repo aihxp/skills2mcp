@@ -43,6 +43,7 @@ Current full-coverage host outputs:
 - `CLAUDE.md`
 - `.cursor/rules/sxmc-cli-ai.md`
 - `GEMINI.md`
+- `.github/copilot-instructions.md`
 - host config scaffolds for Claude Code, Cursor, Gemini CLI, OpenAI/Codex, and generic stdio/http MCP
 
 Out of scope by default:
@@ -126,6 +127,11 @@ Full-coverage rule:
 - use `--coverage full` for preview or sidecar generation across multiple tools
 - use `--coverage full --host ... --mode apply` only for the host-native files you actually want to update
 - non-selected hosts should stay as sidecars during `apply`
+
+Additional optional export:
+
+- `sxmc scaffold llms-txt --from-profile ...`
+  - emits an `llms.txt`-style summary from the same CLI profile
 
 Recommended default behavior:
 

@@ -317,6 +317,11 @@ sxmc init ai --from-cli gh --coverage full --mode preview
 # Apply only the host-native files you actually use, while sidecarring the rest
 sxmc init ai --from-cli gh --coverage full --host claude-code,cursor --mode apply
 
+# Optional llms.txt export from the inspected CLI profile
+sxmc scaffold llms-txt \
+  --from-profile examples/profiles/from_cli.json \
+  --mode apply
+
 # Generate a skill scaffold from the inspected CLI profile
 sxmc scaffold skill \
   --from-profile examples/profiles/from_cli.json \
@@ -347,6 +352,7 @@ This shipped slice is intentionally safe:
 - `init ai --coverage full` generates a portable `AGENTS.md` path, native host docs, and config scaffolds together
 - `scaffold skill` generates a reviewed `SKILL.md` starting point from the profile
 - `scaffold mcp-wrapper` generates a focused wrapper scaffold with a README and manifest
+- `scaffold llms-txt` generates an optional `llms.txt` export from the CLI profile
 - `preview` and `write-sidecar` are the default review paths
 - `apply` updates managed markdown blocks or mergeable config files only
 - existing `AGENTS.md` / `CLAUDE.md` files are never overwritten wholesale
@@ -357,6 +363,7 @@ Current host-aware coverage includes:
 - Claude Code
 - Cursor
 - Gemini CLI
+- GitHub Copilot
 - OpenAI/Codex-style setups
 - generic stdio/http MCP startup scaffolds
 

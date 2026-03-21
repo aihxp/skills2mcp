@@ -58,10 +58,12 @@ These are the core product paths we should treat as stable:
 - `sxmc scaffold client-config --from-profile ...` is supported
 - `sxmc scaffold skill --from-profile ...` is supported
 - `sxmc scaffold mcp-wrapper --from-profile ...` is supported
+- `sxmc scaffold llms-txt --from-profile ...` is supported as an optional export
 - host profiles are supported for:
   - `claude-code`
   - `cursor`
   - `gemini-cli`
+  - `github-copilot`
   - `openai-codex`
   - `generic-stdio-mcp`
   - `generic-http-mcp`

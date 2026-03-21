@@ -107,3 +107,9 @@ Current CLI-to-AI coverage is automated rather than client-UI-driven:
 - `init ai` preview mode for Claude-style startup docs
 - managed `AGENTS.md` apply without overwriting existing content
 - Cursor MCP config merge behavior
+- Gemini-native `GEMINI.md` apply behavior
+- GitHub Copilot native instructions generation
+- optional `llms.txt` export generation
+
+See [CLI_TO_AI_COMPATIBILITY.md](CLI_TO_AI_COMPATIBILITY.md) for the maintained
+host matrix.

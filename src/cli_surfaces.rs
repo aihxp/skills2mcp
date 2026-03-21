@@ -140,6 +140,7 @@ pub enum AiClientProfile {
     ClaudeCode,
     Cursor,
     GeminiCli,
+    GithubCopilot,
     OpenaiCodex,
     GenericStdioMcp,
     GenericHttpMcp,
@@ -363,6 +364,14 @@ pub fn generate_host_native_agent_doc_artifacts(
             audience: ArtifactAudience::Client(AiClientProfile::GeminiCli),
             sidecar_scope: slugify(client_label(AiClientProfile::GeminiCli)),
         },
+        GeneratedArtifact {
+            label: "GitHub Copilot instructions".into(),
+            target_path: root.join(".github/copilot-instructions.md"),
+            content: render_agent_doc(profile, AiClientProfile::GithubCopilot),
+            apply_strategy: ApplyStrategy::ManagedMarkdownBlock,
+            audience: ArtifactAudience::Client(AiClientProfile::GithubCopilot),
+            sidecar_scope: slugify(client_label(AiClientProfile::GithubCopilot)),
+        },
     ]
 }
 
@@ -379,16 +388,15 @@ pub fn generate_full_coverage_init_artifacts(
         AiClientProfile::ClaudeCode,
         AiClientProfile::Cursor,
         AiClientProfile::GeminiCli,
+        AiClientProfile::GithubCopilot,
         AiClientProfile::OpenaiCodex,
         AiClientProfile::GenericStdioMcp,
         AiClientProfile::GenericHttpMcp,
     ] {
-        artifacts.push(generate_client_config_artifact(
-            profile,
-            client,
-            root,
-            skills_path,
-        ));
+        if let Some(artifact) = generate_client_config_artifact(profile, client, root, skills_path)
+        {
+            artifacts.push(artifact);
+        }
     }
 
     Ok(artifacts)
@@ -399,8 +407,8 @@ pub fn generate_client_config_artifact(
     client: AiClientProfile,
     root: &Path,
     skills_path: &Path,
-) -> GeneratedArtifact {
-    let target_path = root.join(client_config_target(client));
+) -> Option<GeneratedArtifact> {
+    let target_path = root.join(client_config_target(client)?);
     let absolute_skills_path = if skills_path.is_absolute() {
         skills_path.to_path_buf()
     } else {
@@ -414,14 +422,14 @@ pub fn generate_client_config_artifact(
         _ => ApplyStrategy::SidecarOnly,
     };
 
-    GeneratedArtifact {
+    Some(GeneratedArtifact {
         label: format!("{} client config", client_label(client)),
         target_path,
         content,
         apply_strategy,
         audience: ArtifactAudience::Client(client),
         sidecar_scope: slugify(client_label(client)),
-    }
+    })
 }
 
 pub fn generate_skill_artifacts(
@@ -495,6 +503,17 @@ pub fn generate_mcp_wrapper_artifacts(
             sidecar_scope: "mcp-wrapper".into(),
         },
     ])
+}
+
+pub fn generate_llms_txt_artifact(profile: &CliSurfaceProfile, root: &Path) -> GeneratedArtifact {
+    GeneratedArtifact {
+        label: "llms.txt export".into(),
+        target_path: root.join("llms.txt"),
+        content: render_llms_txt(profile),
+        apply_strategy: ApplyStrategy::DirectWrite,
+        audience: ArtifactAudience::Shared,
+        sidecar_scope: "llms".into(),
+    }
 }
 
 pub fn materialize_artifacts(
@@ -1011,6 +1030,7 @@ fn client_label(client: AiClientProfile) -> &'static str {
         AiClientProfile::ClaudeCode => "Claude Code",
         AiClientProfile::Cursor => "Cursor",
         AiClientProfile::GeminiCli => "Gemini CLI",
+        AiClientProfile::GithubCopilot => "GitHub Copilot",
         AiClientProfile::OpenaiCodex => "OpenAI/Codex",
         AiClientProfile::GenericStdioMcp => "Generic stdio MCP",
         AiClientProfile::GenericHttpMcp => "Generic HTTP MCP",
@@ -1020,18 +1040,21 @@ fn client_label(client: AiClientProfile) -> &'static str {
 fn agent_doc_target(client: AiClientProfile) -> &'static str {
     match client {
         AiClientProfile::ClaudeCode => "CLAUDE.md",
+        AiClientProfile::GeminiCli => "GEMINI.md",
+        AiClientProfile::GithubCopilot => ".github/copilot-instructions.md",
         _ => "AGENTS.md",
     }
 }
 
-fn client_config_target(client: AiClientProfile) -> &'static str {
+fn client_config_target(client: AiClientProfile) -> Option<&'static str> {
     match client {
-        AiClientProfile::ClaudeCode => ".sxmc/ai/claude-code-mcp.json",
-        AiClientProfile::Cursor => ".cursor/mcp.json",
-        AiClientProfile::GeminiCli => ".gemini/settings.json",
-        AiClientProfile::OpenaiCodex => ".codex/mcp.toml",
-        AiClientProfile::GenericStdioMcp => ".sxmc/ai/generic-stdio-mcp.json",
-        AiClientProfile::GenericHttpMcp => ".sxmc/ai/generic-http-mcp.json",
+        AiClientProfile::ClaudeCode => Some(".sxmc/ai/claude-code-mcp.json"),
+        AiClientProfile::Cursor => Some(".cursor/mcp.json"),
+        AiClientProfile::GeminiCli => Some(".gemini/settings.json"),
+        AiClientProfile::GithubCopilot => None,
+        AiClientProfile::OpenaiCodex => Some(".codex/mcp.toml"),
+        AiClientProfile::GenericStdioMcp => Some(".sxmc/ai/generic-stdio-mcp.json"),
+        AiClientProfile::GenericHttpMcp => Some(".sxmc/ai/generic-http-mcp.json"),
     }
 }
 
@@ -1147,6 +1170,50 @@ fn render_portable_agent_doc(profile: &CliSurfaceProfile) -> String {
             lines.push(format!("- `{}`: {}", subcommand.name, subcommand.summary));
         }
     }
+
+    lines.join("\n")
+}
+
+fn render_llms_txt(profile: &CliSurfaceProfile) -> String {
+    let mut lines = vec![
+        format!("# {}", profile.command),
+        String::new(),
+        profile.summary.clone(),
+    ];
+
+    if let Some(description) = &profile.description {
+        lines.push(String::new());
+        lines.push(description.clone());
+    }
+
+    if !profile.examples.is_empty() {
+        lines.push(String::new());
+        lines.push("## Recommended Commands".into());
+        for example in profile.examples.iter().take(5) {
+            lines.push(format!("- `{}`", example.command));
+        }
+    }
+
+    if !profile.subcommands.is_empty() {
+        lines.push(String::new());
+        lines.push("## High-Confidence Subcommands".into());
+        for subcommand in profile.subcommands.iter().take(6) {
+            lines.push(format!("- `{}`: {}", subcommand.name, subcommand.summary));
+        }
+    }
+
+    if !profile.environment.is_empty() {
+        lines.push(String::new());
+        lines.push("## Environment".into());
+        for env in &profile.environment {
+            lines.push(format!("- `{}`", env.name));
+        }
+    }
+
+    lines.push(String::new());
+    lines.push("## Notes".into());
+    lines.push("- Generated by `sxmc scaffold llms-txt` from a CLI surface profile.".into());
+    lines.push("- Review before publishing as project-facing LLM guidance.".into());
 
     lines.join("\n")
 }
@@ -1580,13 +1647,16 @@ mod tests {
             AiClientProfile::ClaudeCode,
             AiClientProfile::Cursor,
             AiClientProfile::GeminiCli,
+            AiClientProfile::GithubCopilot,
             AiClientProfile::OpenaiCodex,
             AiClientProfile::GenericStdioMcp,
             AiClientProfile::GenericHttpMcp,
         ] {
-            let artifact =
-                generate_client_config_artifact(&profile, client, root.path(), &skills_path);
-            assert!(!artifact.content.is_empty());
+            if let Some(artifact) =
+                generate_client_config_artifact(&profile, client, root.path(), &skills_path)
+            {
+                assert!(!artifact.content.is_empty());
+            }
         }
     }
 

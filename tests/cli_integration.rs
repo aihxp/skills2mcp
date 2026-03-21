@@ -305,6 +305,7 @@ fn test_init_ai_full_preview_lists_multi_host_targets() {
         .stdout(predicate::str::contains("CLAUDE.md"))
         .stdout(predicate::str::contains(".cursor/rules/sxmc-cli-ai.md"))
         .stdout(predicate::str::contains("GEMINI.md"))
+        .stdout(predicate::str::contains(".github/copilot-instructions.md"))
         .stdout(predicate::str::contains(".cursor/mcp.json"))
         .stdout(predicate::str::contains(".gemini/settings.json"))
         .stdout(predicate::str::contains(".codex/mcp.toml"));
@@ -364,6 +365,10 @@ fn test_init_ai_full_apply_updates_selected_hosts_and_sidecars_rest() {
     assert!(temp.path().join(".cursor/mcp.json").exists());
     assert!(temp
         .path()
+        .join(".sxmc/ai/github-copilot/copilot-instructions.md.sxmc.snippet")
+        .exists());
+    assert!(temp
+        .path()
         .join(".sxmc/ai/gemini-cli/GEMINI.md.sxmc.snippet")
         .exists());
     assert!(temp
@@ -401,6 +406,54 @@ fn test_scaffold_agent_doc_apply_preserves_existing_content() {
 }
 
 #[test]
+fn test_scaffold_agent_doc_apply_for_gemini_writes_gemini_md() {
+    let temp = tempfile::tempdir().unwrap();
+
+    sxmc()
+        .args([
+            "scaffold",
+            "agent-doc",
+            "--from-profile",
+            "examples/profiles/from_cli.json",
+            "--client",
+            "gemini-cli",
+            "--root",
+            temp.path().to_str().unwrap(),
+            "--mode",
+            "apply",
+        ])
+        .assert()
+        .success();
+
+    let contents = fs::read_to_string(temp.path().join("GEMINI.md")).unwrap();
+    assert!(contents.contains("sxmc CLI Surface: `gh`"));
+}
+
+#[test]
+fn test_scaffold_agent_doc_apply_for_github_copilot_writes_native_instructions() {
+    let temp = tempfile::tempdir().unwrap();
+
+    sxmc()
+        .args([
+            "scaffold",
+            "agent-doc",
+            "--from-profile",
+            "examples/profiles/from_cli.json",
+            "--client",
+            "github-copilot",
+            "--root",
+            temp.path().to_str().unwrap(),
+            "--mode",
+            "apply",
+        ])
+        .assert()
+        .success();
+
+    let contents = fs::read_to_string(temp.path().join(".github/copilot-instructions.md")).unwrap();
+    assert!(contents.contains("sxmc CLI Surface: `gh`"));
+}
+
+#[test]
 fn test_scaffold_client_config_apply_merges_cursor_json() {
     let temp = tempfile::tempdir().unwrap();
     let cursor_dir = temp.path().join(".cursor");
@@ -432,6 +485,26 @@ fn test_scaffold_client_config_apply_merges_cursor_json() {
     assert!(contents.contains("\"existing\""));
     assert!(contents.contains("\"sxmc-cli-ai-gh\""));
     assert!(contents.contains("\"command\": \"sxmc\""));
+}
+
+#[test]
+fn test_scaffold_client_config_for_github_copilot_is_rejected() {
+    sxmc()
+        .args([
+            "scaffold",
+            "client-config",
+            "--from-profile",
+            "examples/profiles/from_cli.json",
+            "--client",
+            "github-copilot",
+            "--mode",
+            "preview",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "GitHub Copilot does not have a native MCP config target",
+        ));
 }
 
 #[test]
@@ -483,6 +556,29 @@ fn test_scaffold_mcp_wrapper_apply_writes_wrapper_files() {
     assert!(readme.contains("# gh MCP wrapper scaffold"));
     assert!(manifest.contains("\"source_command\": \"gh\""));
     assert!(manifest.contains("\"suggested_tools\""));
+}
+
+#[test]
+fn test_scaffold_llms_txt_apply_writes_export() {
+    let temp = tempfile::tempdir().unwrap();
+
+    sxmc()
+        .args([
+            "scaffold",
+            "llms-txt",
+            "--from-profile",
+            "examples/profiles/from_cli.json",
+            "--root",
+            temp.path().to_str().unwrap(),
+            "--mode",
+            "apply",
+        ])
+        .assert()
+        .success();
+
+    let contents = fs::read_to_string(temp.path().join("llms.txt")).unwrap();
+    assert!(contents.contains("# gh"));
+    assert!(contents.contains("## Recommended Commands"));
 }
 
 #[test]

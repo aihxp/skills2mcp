@@ -159,6 +159,10 @@ sxmc scaffold skill \
 sxmc scaffold mcp-wrapper \
   --from-profile examples/profiles/from_cli.json \
   --mode preview
+
+sxmc scaffold llms-txt \
+  --from-profile examples/profiles/from_cli.json \
+  --mode preview
 ```
 
 Write modes:
@@ -187,6 +191,7 @@ Current host profiles:
 - `claude-code`
 - `cursor`
 - `gemini-cli`
+- `github-copilot`
 - `openai-codex`
 - `generic-stdio-mcp`
 - `generic-http-mcp`
@@ -197,7 +202,13 @@ Full-coverage generation produces:
 - `CLAUDE.md` for Claude Code
 - `.cursor/rules/sxmc-cli-ai.md` for Cursor
 - `GEMINI.md` for Gemini CLI
+- `.github/copilot-instructions.md` for GitHub Copilot
 - host config scaffolds for Claude, Cursor, Gemini, OpenAI/Codex, and generic stdio/http MCP
+
+Notes:
+
+- GitHub Copilot gets a native instructions file, not an MCP config scaffold
+- `llms.txt` is optional and exported separately through `scaffold llms-txt`
 
 ## Client Setup Notes
 
