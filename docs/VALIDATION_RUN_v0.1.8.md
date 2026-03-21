@@ -5,7 +5,7 @@ This document records a **maintainer-style validation pass**: automated tests, r
 ## Environment
 
 - **Host:** Linux x86_64  
-- **sxmc:** **0.1.8** (`target/release/sxmc` from repo; `cargo install sxmc --force` also targets **0.1.8** on crates.io)  
+- **sxmc:** **0.1.8** — validated primarily with **`target/release/sxmc` built from this repo** (`cargo search sxmc` shows **0.1.8** on crates.io)  
 - **Node:** `npx` available for `@modelcontextprotocol/*` smoke scripts  
 
 ---
