@@ -205,7 +205,6 @@ enum Commands {
         operation: Option<String>,
 
         /// Arguments as key=value pairs
-        #[arg(trailing_var_arg = true)]
         args: Vec<String>,
 
         /// List available operations
@@ -238,7 +237,6 @@ enum Commands {
         operation: Option<String>,
 
         /// Arguments as key=value pairs
-        #[arg(trailing_var_arg = true)]
         args: Vec<String>,
 
         /// List available operations
@@ -271,7 +269,6 @@ enum Commands {
         operation: Option<String>,
 
         /// Arguments as key=value pairs
-        #[arg(trailing_var_arg = true)]
         args: Vec<String>,
 
         /// List available operations

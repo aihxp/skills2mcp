@@ -1,10 +1,11 @@
 use assert_cmd::Command;
-use axum::{routing::get, Json, Router};
+use axum::{routing::get, routing::post, Json, Router};
 use predicates::prelude::*;
 use std::fs;
-use std::net::TcpListener;
+use std::io::{BufRead, BufReader};
 use std::path::Path;
-use std::process::Command as ProcessCommand;
+use std::process::{Child, Command as ProcessCommand, Stdio};
+use std::sync::mpsc;
 use std::time::Duration;
 
 fn sxmc() -> Command {
@@ -24,14 +25,6 @@ fn sxmc_bin_string() -> String {
         .into_owned()
 }
 
-fn pick_unused_port() -> u16 {
-    TcpListener::bind("127.0.0.1:0")
-        .unwrap()
-        .local_addr()
-        .unwrap()
-        .port()
-}
-
 fn wait_for_http_server(port: u16) {
     let addr = format!("127.0.0.1:{port}")
         .parse()
@@ -44,6 +37,63 @@ fn wait_for_http_server(port: u16) {
         std::thread::sleep(Duration::from_millis(100));
     }
     panic!("timed out waiting for HTTP server on port {}", port);
+}
+
+fn spawn_http_server(extra_args: &[&str]) -> (Child, u16) {
+    let mut child = ProcessCommand::new(sxmc_bin_string())
+        .args([
+            "serve",
+            "--transport",
+            "http",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "0",
+        ])
+        .args(extra_args)
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+
+    let stderr = child.stderr.take().expect("child stderr should be piped");
+    let (sender, receiver) = mpsc::channel();
+    std::thread::spawn(move || {
+        let reader = BufReader::new(stderr);
+        let mut sent = false;
+        for line in reader.lines().map_while(Result::ok) {
+            if !sent {
+                if let Some(port) = line
+                    .split("http://127.0.0.1:")
+                    .nth(1)
+                    .and_then(|tail| tail.split("/mcp").next())
+                    .and_then(|port| port.parse::<u16>().ok())
+                {
+                    let _ = sender.send(port);
+                    sent = true;
+                }
+            }
+        }
+    });
+
+    let port = receiver
+        .recv_timeout(Duration::from_secs(5))
+        .expect("timed out waiting for HTTP server port");
+    wait_for_http_server(port);
+    (child, port)
+}
+
+fn command_stdout(args: &[&str]) -> String {
+    let output = ProcessCommand::new(sxmc_bin_string())
+        .args(args)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "command failed: {}\nstderr:\n{}",
+        output.status,
+        String::from_utf8_lossy(&output.stderr)
+    );
+    String::from_utf8_lossy(&output.stdout).into_owned()
 }
 
 #[test]
@@ -734,23 +784,7 @@ fn test_stdio_executes_project_local_skill_script_without_explicit_paths() {
 
 #[test]
 fn test_http_lists_hybrid_skill_tools() {
-    let port = pick_unused_port();
-    let mut child = ProcessCommand::new(sxmc_bin_string())
-        .args([
-            "serve",
-            "--transport",
-            "http",
-            "--host",
-            "127.0.0.1",
-            "--port",
-            &port.to_string(),
-            "--paths",
-            "tests/fixtures",
-        ])
-        .spawn()
-        .unwrap();
-
-    wait_for_http_server(port);
+    let (mut child, port) = spawn_http_server(&["--paths", "tests/fixtures"]);
 
     sxmc()
         .args(["http", &format!("http://127.0.0.1:{port}/mcp"), "--list"])
@@ -766,23 +800,7 @@ fn test_http_lists_hybrid_skill_tools() {
 
 #[test]
 fn test_http_lists_resources_explicitly() {
-    let port = pick_unused_port();
-    let mut child = ProcessCommand::new(sxmc_bin_string())
-        .args([
-            "serve",
-            "--transport",
-            "http",
-            "--host",
-            "127.0.0.1",
-            "--port",
-            &port.to_string(),
-            "--paths",
-            "tests/fixtures",
-        ])
-        .spawn()
-        .unwrap();
-
-    wait_for_http_server(port);
+    let (mut child, port) = spawn_http_server(&["--paths", "tests/fixtures"]);
 
     sxmc()
         .args([
@@ -801,23 +819,7 @@ fn test_http_lists_resources_explicitly() {
 
 #[test]
 fn test_http_reads_prompt() {
-    let port = pick_unused_port();
-    let mut child = ProcessCommand::new(sxmc_bin_string())
-        .args([
-            "serve",
-            "--transport",
-            "http",
-            "--host",
-            "127.0.0.1",
-            "--port",
-            &port.to_string(),
-            "--paths",
-            "tests/fixtures",
-        ])
-        .spawn()
-        .unwrap();
-
-    wait_for_http_server(port);
+    let (mut child, port) = spawn_http_server(&["--paths", "tests/fixtures"]);
 
     sxmc()
         .args([
@@ -837,23 +839,7 @@ fn test_http_reads_prompt() {
 
 #[test]
 fn test_http_reads_resource() {
-    let port = pick_unused_port();
-    let mut child = ProcessCommand::new(sxmc_bin_string())
-        .args([
-            "serve",
-            "--transport",
-            "http",
-            "--host",
-            "127.0.0.1",
-            "--port",
-            &port.to_string(),
-            "--paths",
-            "tests/fixtures",
-        ])
-        .spawn()
-        .unwrap();
-
-    wait_for_http_server(port);
+    let (mut child, port) = spawn_http_server(&["--paths", "tests/fixtures"]);
 
     sxmc()
         .args([
@@ -873,25 +859,12 @@ fn test_http_reads_resource() {
 
 #[test]
 fn test_http_lists_hybrid_skill_tools_with_required_header() {
-    let port = pick_unused_port();
-    let mut child = ProcessCommand::new(sxmc_bin_string())
-        .args([
-            "serve",
-            "--transport",
-            "http",
-            "--host",
-            "127.0.0.1",
-            "--port",
-            &port.to_string(),
-            "--require-header",
-            "Authorization: Bearer integration-token",
-            "--paths",
-            "tests/fixtures",
-        ])
-        .spawn()
-        .unwrap();
-
-    wait_for_http_server(port);
+    let (mut child, port) = spawn_http_server(&[
+        "--require-header",
+        "Authorization: Bearer integration-token",
+        "--paths",
+        "tests/fixtures",
+    ]);
 
     sxmc()
         .args([
@@ -913,7 +886,6 @@ fn test_http_lists_hybrid_skill_tools_with_required_header() {
 
 #[test]
 fn test_http_lists_hybrid_skill_tools_with_bearer_token() {
-    let port = pick_unused_port();
     let mut child = ProcessCommand::new(sxmc_bin_string())
         .env("SXMC_TEST_BEARER_TOKEN", "integration-bearer-token")
         .args([
@@ -923,15 +895,37 @@ fn test_http_lists_hybrid_skill_tools_with_bearer_token() {
             "--host",
             "127.0.0.1",
             "--port",
-            &port.to_string(),
+            "0",
             "--bearer-token",
             "env:SXMC_TEST_BEARER_TOKEN",
             "--paths",
             "tests/fixtures",
         ])
+        .stderr(Stdio::piped())
         .spawn()
         .unwrap();
-
+    let stderr = child.stderr.take().expect("child stderr should be piped");
+    let (sender, receiver) = mpsc::channel();
+    std::thread::spawn(move || {
+        let reader = BufReader::new(stderr);
+        let mut sent = false;
+        for line in reader.lines().map_while(Result::ok) {
+            if !sent {
+                if let Some(port) = line
+                    .split("http://127.0.0.1:")
+                    .nth(1)
+                    .and_then(|tail| tail.split("/mcp").next())
+                    .and_then(|port| port.parse::<u16>().ok())
+                {
+                    let _ = sender.send(port);
+                    sent = true;
+                }
+            }
+        }
+    });
+    let port = receiver
+        .recv_timeout(Duration::from_secs(5))
+        .expect("timed out waiting for bearer HTTP server port");
     wait_for_http_server(port);
 
     sxmc()
@@ -954,25 +948,12 @@ fn test_http_lists_hybrid_skill_tools_with_bearer_token() {
 
 #[tokio::test]
 async fn test_http_health_endpoint_reports_auth_mode() {
-    let port = pick_unused_port();
-    let mut child = ProcessCommand::new(sxmc_bin_string())
-        .args([
-            "serve",
-            "--transport",
-            "http",
-            "--host",
-            "127.0.0.1",
-            "--port",
-            &port.to_string(),
-            "--bearer-token",
-            "health-token",
-            "--paths",
-            "tests/fixtures",
-        ])
-        .spawn()
-        .unwrap();
-
-    wait_for_http_server(port);
+    let (mut child, port) = spawn_http_server(&[
+        "--bearer-token",
+        "health-token",
+        "--paths",
+        "tests/fixtures",
+    ]);
 
     let response: serde_json::Value = reqwest::get(format!("http://127.0.0.1:{port}/healthz"))
         .await
@@ -1051,4 +1032,277 @@ async fn test_spec_supports_toon_output_format() {
         .stdout(predicate::str::contains(r#"  2,"Pixel""#));
 
     handle.abort();
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_api_autodetect_openapi_local_list_and_call() {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let spec = serde_json::json!({
+        "openapi": "3.0.0",
+        "info": { "title": "Local Pets", "version": "1.0.0" },
+        "servers": [{ "url": format!("http://{addr}") }],
+        "paths": {
+            "/pets": {
+                "get": {
+                    "operationId": "listPets",
+                    "summary": "List pets",
+                    "parameters": [
+                        { "name": "limit", "in": "query", "schema": { "type": "integer" } }
+                    ],
+                    "responses": { "200": { "description": "ok" } }
+                }
+            }
+        }
+    });
+    let spec_clone = spec.clone();
+    let handle = tokio::spawn(async move {
+        let app = Router::new()
+            .route(
+                "/openapi.json",
+                get(move || {
+                    let spec = spec_clone.clone();
+                    async move { Json(spec) }
+                }),
+            )
+            .route(
+                "/pets",
+                get(|| async {
+                    Json(serde_json::json!({
+                        "pets": [
+                            {"id": 1, "name": "Mochi"},
+                            {"id": 2, "name": "Pixel"}
+                        ]
+                    }))
+                }),
+            );
+        let _ = axum::serve(listener, app).await;
+    });
+
+    let base = format!("http://{addr}/openapi.json");
+
+    sxmc()
+        .args(["api", &base, "--list"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("listPets"));
+
+    sxmc()
+        .args(["api", &base, "listPets", "limit=2", "--format", "toon"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("pets[2]{id,name}:"))
+        .stdout(predicate::str::contains(r#"  1,"Mochi""#));
+
+    handle.abort();
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_graphql_local_list_and_call() {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let handle = tokio::spawn(async move {
+        let app = Router::new().route(
+            "/graphql",
+            post(|Json(payload): Json<serde_json::Value>| async move {
+                let query = payload
+                    .get("query")
+                    .and_then(serde_json::Value::as_str)
+                    .unwrap_or("");
+                if query.contains("__schema") {
+                    Json(serde_json::json!({
+                        "data": {
+                            "__schema": {
+                                "queryType": { "name": "Query" },
+                                "mutationType": null,
+                                "types": [
+                                    {
+                                        "kind": "OBJECT",
+                                        "name": "Query",
+                                        "fields": [
+                                            {
+                                                "name": "hello",
+                                                "args": [],
+                                                "type": { "kind": "SCALAR", "name": "String", "ofType": null }
+                                            },
+                                            {
+                                                "name": "echo",
+                                                "args": [
+                                                    {
+                                                        "name": "message",
+                                                        "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+                                                        "defaultValue": null
+                                                    }
+                                                ],
+                                                "type": { "kind": "SCALAR", "name": "String", "ofType": null }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "kind": "SCALAR",
+                                        "name": "String",
+                                        "fields": null,
+                                        "inputFields": null,
+                                        "interfaces": null,
+                                        "enumValues": null,
+                                        "possibleTypes": null
+                                    }
+                                ],
+                                "directives": []
+                            }
+                        }
+                    }))
+                } else if query.contains("echo") {
+                    let message = payload
+                        .get("variables")
+                        .and_then(|value| value.get("message"))
+                        .and_then(serde_json::Value::as_str)
+                        .unwrap_or("");
+                    Json(serde_json::json!({ "data": { "echo": message } }))
+                } else {
+                    Json(serde_json::json!({ "data": { "hello": "world" } }))
+                }
+            }),
+        );
+        let _ = axum::serve(listener, app).await;
+    });
+
+    let base = format!("http://{addr}/graphql");
+
+    sxmc()
+        .args(["graphql", &base, "--list"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("hello"))
+        .stdout(predicate::str::contains("echo"));
+
+    sxmc()
+        .args(["graphql", &base, "echo", "message=hello", "--pretty"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"echo\": \"hello\""));
+
+    handle.abort();
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_skills_create_from_local_spec() {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let spec = serde_json::json!({
+        "openapi": "3.0.0",
+        "info": { "title": "Local Pets API", "version": "1.0.0" },
+        "servers": [{ "url": format!("http://{addr}") }],
+        "paths": {
+            "/pets": {
+                "get": {
+                    "operationId": "listPets",
+                    "summary": "List pets",
+                    "responses": { "200": { "description": "ok" } }
+                }
+            }
+        }
+    });
+    let spec_clone = spec.clone();
+    let handle = tokio::spawn(async move {
+        let app = Router::new().route(
+            "/openapi.json",
+            get(move || {
+                let spec = spec_clone.clone();
+                async move { Json(spec) }
+            }),
+        );
+        let _ = axum::serve(listener, app).await;
+    });
+
+    let temp = tempfile::tempdir().unwrap();
+    let output_dir = temp.path().join("generated-skills");
+
+    sxmc()
+        .args([
+            "skills",
+            "create",
+            &format!("http://{addr}/openapi.json"),
+            "--output-dir",
+            output_dir.to_str().unwrap(),
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Generated skill at:"));
+
+    let skill_path = output_dir.join("local-pets-api").join("SKILL.md");
+    assert!(skill_path.exists());
+    let skill_body = fs::read_to_string(&skill_path).unwrap();
+    assert!(skill_body.contains("listPets"));
+
+    handle.abort();
+}
+
+#[test]
+fn test_serve_watch_reloads_skill_prompt_over_http() {
+    let temp = tempfile::tempdir().unwrap();
+    let skill_dir = temp.path().join("watch-skill");
+    fs::create_dir_all(&skill_dir).unwrap();
+    let skill_path = skill_dir.join("SKILL.md");
+    fs::write(
+        &skill_path,
+        r#"---
+name: watch-skill
+description: "Watch reload test"
+argument-hint: "[name]"
+---
+
+Hello version one, $ARGUMENTS!
+"#,
+    )
+    .unwrap();
+
+    let (mut child, port) =
+        spawn_http_server(&["--watch", "--paths", temp.path().to_str().unwrap()]);
+
+    let before = command_stdout(&[
+        "http",
+        &format!("http://127.0.0.1:{port}/mcp"),
+        "--prompt",
+        "watch-skill",
+        "arguments=friend",
+    ]);
+    assert!(before.contains("Hello version one, friend!"));
+
+    fs::write(
+        &skill_path,
+        r#"---
+name: watch-skill
+description: "Watch reload test"
+argument-hint: "[name]"
+---
+
+Hello version two, $ARGUMENTS!
+"#,
+    )
+    .unwrap();
+
+    let mut saw_reload = false;
+    for _ in 0..12 {
+        std::thread::sleep(Duration::from_millis(300));
+        let after = command_stdout(&[
+            "http",
+            &format!("http://127.0.0.1:{port}/mcp"),
+            "--prompt",
+            "watch-skill",
+            "arguments=friend",
+        ]);
+        if after.contains("Hello version two, friend!") {
+            saw_reload = true;
+            break;
+        }
+    }
+
+    let _ = child.kill();
+    let _ = child.wait();
+
+    assert!(
+        saw_reload,
+        "watch mode did not reload the updated skill body"
+    );
 }

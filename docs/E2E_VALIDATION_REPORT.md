@@ -77,6 +77,21 @@ cargo build --release
 
 **Contrast with crates.io v0.1.1 (unpatched):** MCP script invocation without `--paths` and live `api` calls (same Petstore URL) reproduced the two issues above.
 
+## Edge-expansion coverage on `master`
+
+The integration suite now covers the main areas that previously needed extra
+manual confidence checks:
+
+- local OpenAPI autodetect list + operation call via `sxmc api`
+- local GraphQL introspection list + operation call via `sxmc graphql`
+- `sxmc skills create` from a live local OpenAPI document
+- `sxmc serve --watch` reloading a changed skill body over remote HTTP MCP
+
+This pass also surfaced and fixed a CLI parsing bug: `api`, `spec`, and
+`graphql` were treating trailing arguments too greedily, so flags like
+`--format toon` and `--pretty` placed after operation arguments could be
+silently swallowed instead of applied.
+
 ### Post-release check: **crates.io v0.1.2** (2026-03-20)
 
 Re-validated using a clean install from crates.io:

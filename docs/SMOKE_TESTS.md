@@ -18,6 +18,14 @@ These checks are intentionally separate from the Linux timing harness in
 tests answer "does it start and work," while benchmarks answer "how long did
 this machine take."
 
+The automated integration suite also covers several edge-expansion scenarios
+that used to be called out as manual-only checks:
+
+- local OpenAPI autodetect list and call flows via `sxmc api`
+- local GraphQL list and call flows via `sxmc graphql`
+- `sxmc skills create` against a local OpenAPI spec
+- `sxmc serve --watch` reloading an updated skill body over HTTP
+
 ## Startup Sanity
 
 Before running the broader client smoke checks, confirm the binary starts
