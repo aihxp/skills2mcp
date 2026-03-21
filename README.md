@@ -311,6 +311,16 @@ sxmc inspect cli gh --format toon
 sxmc init ai --from-cli gh --client claude-code --mode preview
 sxmc init ai --from-cli gh --client cursor --mode preview
 
+# Generate a skill scaffold from the inspected CLI profile
+sxmc scaffold skill \
+  --from-profile examples/profiles/from_cli.json \
+  --mode apply
+
+# Generate an MCP wrapper scaffold from the inspected CLI profile
+sxmc scaffold mcp-wrapper \
+  --from-profile examples/profiles/from_cli.json \
+  --mode apply
+
 # Apply a managed block to the real startup-read doc file
 sxmc scaffold agent-doc \
   --from-profile examples/profiles/from_cli.json \
@@ -328,6 +338,8 @@ This shipped slice is intentionally safe:
 
 - `inspect cli` builds the canonical JSON profile for a real command
 - `init ai` generates a profile sidecar, an agent-doc block, and a host config scaffold
+- `scaffold skill` generates a reviewed `SKILL.md` starting point from the profile
+- `scaffold mcp-wrapper` generates a focused wrapper scaffold with a README and manifest
 - `preview` and `write-sidecar` are the default review paths
 - `apply` updates managed markdown blocks or mergeable config files only
 - existing `AGENTS.md` / `CLAUDE.md` files are never overwritten wholesale

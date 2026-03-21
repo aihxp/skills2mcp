@@ -149,6 +149,14 @@ sxmc scaffold client-config \
   --from-profile examples/profiles/from_cli.json \
   --client cursor \
   --mode preview
+
+sxmc scaffold skill \
+  --from-profile examples/profiles/from_cli.json \
+  --mode preview
+
+sxmc scaffold mcp-wrapper \
+  --from-profile examples/profiles/from_cli.json \
+  --mode preview
 ```
 
 Write modes:
@@ -168,6 +176,7 @@ Safety rules:
 - `apply` uses managed `sxmc` blocks for markdown docs
 - JSON MCP configs are merged where the host shape is known
 - `sxmc` refuses to inspect itself unless you pass `--allow-self`
+- skill and MCP-wrapper scaffolds write new files rather than mutating existing docs
 
 Current host profiles:
 

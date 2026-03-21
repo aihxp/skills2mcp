@@ -167,6 +167,7 @@ pub enum ApplyStrategy {
     ManagedMarkdownBlock,
     JsonMcpConfig,
     TomlManagedBlock,
+    DirectWrite,
 }
 
 #[derive(Debug, Clone)]
@@ -326,6 +327,73 @@ pub fn generate_client_config_artifact(
         content,
         apply_strategy,
     }
+}
+
+pub fn generate_skill_artifacts(
+    profile: &CliSurfaceProfile,
+    root: &Path,
+    output_dir: &Path,
+) -> Vec<GeneratedArtifact> {
+    let slug = slugify(&profile.command);
+    let skill_dir = if output_dir.is_absolute() {
+        output_dir.join(format!("{slug}-cli"))
+    } else {
+        root.join(output_dir).join(format!("{slug}-cli"))
+    };
+
+    vec![GeneratedArtifact {
+        label: "Skill scaffold".into(),
+        target_path: skill_dir.join("SKILL.md"),
+        content: render_skill_markdown(profile),
+        apply_strategy: ApplyStrategy::DirectWrite,
+    }]
+}
+
+pub fn generate_mcp_wrapper_artifacts(
+    profile: &CliSurfaceProfile,
+    root: &Path,
+    output_dir: &Path,
+) -> Result<Vec<GeneratedArtifact>> {
+    let slug = slugify(&profile.command);
+    let wrapper_dir = if output_dir.is_absolute() {
+        output_dir.join(format!("{slug}-mcp-wrapper"))
+    } else {
+        root.join(output_dir).join(format!("{slug}-mcp-wrapper"))
+    };
+    let manifest = json!({
+        "name": format!("{slug}-mcp-wrapper"),
+        "source_command": profile.command,
+        "summary": profile.summary,
+        "notes": [
+            "Wrap the CLI as a focused MCP server instead of mirroring every subcommand.",
+            "Prefer a few narrow tools first and keep outputs machine-friendly.",
+            "Use the profile and examples to decide what becomes a tool, prompt, or resource."
+        ],
+        "suggested_tools": profile.subcommands.iter().take(5).map(|subcommand| {
+            json!({
+                "name": subcommand.name,
+                "summary": subcommand.summary,
+                "confidence": subcommand.confidence
+            })
+        }).collect::<Vec<_>>(),
+        "environment": profile.environment,
+        "examples": profile.examples,
+    });
+
+    Ok(vec![
+        GeneratedArtifact {
+            label: "MCP wrapper README".into(),
+            target_path: wrapper_dir.join("README.md"),
+            content: render_mcp_wrapper_readme(profile),
+            apply_strategy: ApplyStrategy::DirectWrite,
+        },
+        GeneratedArtifact {
+            label: "MCP wrapper manifest".into(),
+            target_path: wrapper_dir.join("manifest.json"),
+            content: serde_json::to_string_pretty(&manifest)?,
+            apply_strategy: ApplyStrategy::DirectWrite,
+        },
+    ])
 }
 
 pub fn materialize_artifacts(
@@ -941,6 +1009,126 @@ fn render_client_config(client: AiClientProfile, server_name: &str, skills_path:
     }
 }
 
+fn render_skill_markdown(profile: &CliSurfaceProfile) -> String {
+    let name = format!("{}-cli", slugify(&profile.command));
+    let description = profile
+        .description
+        .as_deref()
+        .unwrap_or(&profile.summary)
+        .replace('"', "'");
+    let argument_hint = profile
+        .positionals
+        .iter()
+        .map(|positional| format!("<{}>", positional.name))
+        .chain(
+            profile
+                .options
+                .iter()
+                .take(3)
+                .map(|option| option.name.clone()),
+        )
+        .collect::<Vec<_>>()
+        .join(" ");
+
+    let mut body = vec![
+        "---".to_string(),
+        format!("name: {}", name),
+        format!("description: \"{}\"", description),
+    ];
+    if !argument_hint.trim().is_empty() {
+        body.push(format!("argument-hint: \"{}\"", argument_hint));
+    }
+    body.push("---".to_string());
+    body.push(String::new());
+    body.push(format!("# {} CLI workflow", profile.command));
+    body.push(String::new());
+    body.push(profile.summary.clone());
+
+    if let Some(description) = &profile.description {
+        body.push(String::new());
+        body.push(description.clone());
+    }
+
+    if !profile.examples.is_empty() {
+        body.push(String::new());
+        body.push("Recommended commands:".into());
+        for example in profile.examples.iter().take(5) {
+            body.push(format!("- `{}`", example.command));
+        }
+    }
+
+    if !profile.subcommands.is_empty() {
+        body.push(String::new());
+        body.push("High-confidence subcommands:".into());
+        for subcommand in profile.subcommands.iter().take(5) {
+            body.push(format!("- `{}`: {}", subcommand.name, subcommand.summary));
+        }
+    }
+
+    body.push(String::new());
+    body.push("Execution guidance:".into());
+    body.push(format!(
+        "- Start with `{}` `--help` if the exact shape is unclear.",
+        profile.command
+    ));
+    body.push("- Prefer machine-friendly flags like `--json` when available.".into());
+    body.push("- Keep large output in files or pipes instead of pasting it into context.".into());
+    body.push(
+        "- Re-check auth or environment requirements before performing write actions.".into(),
+    );
+    body.push(String::new());
+    body.push(
+        "This file was generated by `sxmc scaffold skill` from a CLI profile and should be reviewed before wider use."
+            .into(),
+    );
+    body.join("\n")
+}
+
+fn render_mcp_wrapper_readme(profile: &CliSurfaceProfile) -> String {
+    let slug = slugify(&profile.command);
+    let mut lines = vec![
+        format!("# {} MCP wrapper scaffold", profile.command),
+        String::new(),
+        "This scaffold is a starting point for wrapping a CLI as a focused MCP server.".into(),
+        String::new(),
+        "Recommended approach:".into(),
+        format!(
+            "- Start from the `{}` CLI profile rather than mirroring the whole CLI.",
+            slug
+        ),
+        "- Expose a few narrow tools first.".into(),
+        "- Keep outputs machine-friendly and bounded.".into(),
+        "- Treat prompts/resources as optional depending on the CLI.".into(),
+    ];
+
+    if !profile.subcommands.is_empty() {
+        lines.push(String::new());
+        lines.push("Candidate tool surfaces:".into());
+        for subcommand in profile.subcommands.iter().take(5) {
+            lines.push(format!("- `{}`: {}", subcommand.name, subcommand.summary));
+        }
+    }
+
+    if !profile.examples.is_empty() {
+        lines.push(String::new());
+        lines.push("Examples to preserve in wrapper behavior:".into());
+        for example in profile.examples.iter().take(5) {
+            lines.push(format!("- `{}`", example.command));
+        }
+    }
+
+    lines.push(String::new());
+    lines.push("Files:".into());
+    lines.push(
+        "- `manifest.json` captures the inspected profile details and suggested wrapper shape."
+            .into(),
+    );
+    lines.push(
+        "- Add server code, tests, and launch scripts beside this scaffold as needed.".into(),
+    );
+    lines.join("\n")
+}
+
 fn sidecar_path(client: AiClientProfile, root: &Path, original_target: &Path) -> PathBuf {
     let file_name = original_target
         .file_name()
@@ -1002,6 +1190,7 @@ fn proposed_applied_content(artifact: &GeneratedArtifact, root: &Path) -> Result
                 toml_block_markers(&artifact.target_path),
             ))
         }
+        ApplyStrategy::DirectWrite => Ok(artifact.content.clone()),
         ApplyStrategy::SidecarOnly => {
             let target = sidecar_path(AiClientProfile::ClaudeCode, root, &artifact.target_path);
             let _ = target;
@@ -1074,6 +1263,10 @@ fn apply_artifact(
                 toml_block_markers(&artifact.target_path),
             );
             write_file(&artifact.target_path, &updated)?;
+            Ok(artifact.target_path.clone())
+        }
+        ApplyStrategy::DirectWrite => {
+            write_file(&artifact.target_path, &artifact.content)?;
             Ok(artifact.target_path.clone())
         }
     }

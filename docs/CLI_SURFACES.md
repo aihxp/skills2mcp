@@ -170,8 +170,10 @@ The current command family is:
 - `sxmc inspect cli <command>`
 - `sxmc inspect profile <file>`
 - `sxmc init ai --from-cli <command> --client <profile>`
+- `sxmc scaffold skill --from-profile <file>`
 - `sxmc scaffold agent-doc --from-profile <file> --client <profile>`
 - `sxmc scaffold client-config --from-profile <file> --client <profile>`
+- `sxmc scaffold mcp-wrapper --from-profile <file>`
 
 This keeps inspection deterministic and generation reviewable while making the
 startup-discovery path explicit.
@@ -182,8 +184,10 @@ Current shipped scope:
 
 - one versioned JSON profile schema
 - one deterministic inspection path
+- one skill scaffold target
 - one host-aware agent-doc target
 - one host-aware client-config scaffold target
+- one MCP-wrapper scaffold target
 - provenance on every generated artifact
 - preview/sidecar/patch/apply modes
 - no default mutation of existing repo docs

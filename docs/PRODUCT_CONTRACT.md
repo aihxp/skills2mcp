@@ -55,6 +55,8 @@ These are the core product paths we should treat as stable:
 - `sxmc init ai --from-cli <command> --client <profile>` is supported for generating startup-facing artifacts
 - `sxmc scaffold agent-doc --from-profile ...` is supported
 - `sxmc scaffold client-config --from-profile ...` is supported
+- `sxmc scaffold skill --from-profile ...` is supported
+- `sxmc scaffold mcp-wrapper --from-profile ...` is supported
 - host profiles are supported for:
   - `claude-code`
   - `cursor`
@@ -75,6 +77,7 @@ These scenarios should not crash the product or produce misleading results:
 - unsupported optional MCP surfaces should be skipped with a clear note rather than failing all discovery
 - `scan` should continue to use non-zero exit status for findings by design, but not be treated as a crash
 - existing `AGENTS.md` / `CLAUDE.md` files should not be overwritten wholesale by CLI->AI generation
+- scaffolded skill and MCP-wrapper files should be created as new files rather than overwriting arbitrary existing files
 
 ## Explicitly Outside The Contract
 

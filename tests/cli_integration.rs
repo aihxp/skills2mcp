@@ -348,6 +348,57 @@ fn test_scaffold_client_config_apply_merges_cursor_json() {
 }
 
 #[test]
+fn test_scaffold_skill_apply_writes_skill_markdown() {
+    let temp = tempfile::tempdir().unwrap();
+
+    sxmc()
+        .args([
+            "scaffold",
+            "skill",
+            "--from-profile",
+            "examples/profiles/from_cli.json",
+            "--root",
+            temp.path().to_str().unwrap(),
+            "--mode",
+            "apply",
+        ])
+        .assert()
+        .success();
+
+    let skill_path = temp.path().join(".claude/skills/gh-cli/SKILL.md");
+    let contents = fs::read_to_string(&skill_path).unwrap();
+    assert!(contents.contains("name: gh-cli"));
+    assert!(contents.contains("# gh CLI workflow"));
+    assert!(contents.contains("Recommended commands:"));
+}
+
+#[test]
+fn test_scaffold_mcp_wrapper_apply_writes_wrapper_files() {
+    let temp = tempfile::tempdir().unwrap();
+
+    sxmc()
+        .args([
+            "scaffold",
+            "mcp-wrapper",
+            "--from-profile",
+            "examples/profiles/from_cli.json",
+            "--root",
+            temp.path().to_str().unwrap(),
+            "--mode",
+            "apply",
+        ])
+        .assert()
+        .success();
+
+    let wrapper_dir = temp.path().join(".sxmc/mcp-wrappers/gh-mcp-wrapper");
+    let readme = fs::read_to_string(wrapper_dir.join("README.md")).unwrap();
+    let manifest = fs::read_to_string(wrapper_dir.join("manifest.json")).unwrap();
+    assert!(readme.contains("# gh MCP wrapper scaffold"));
+    assert!(manifest.contains("\"source_command\": \"gh\""));
+    assert!(manifest.contains("\"suggested_tools\""));
+}
+
+#[test]
 fn test_scan_clean_skills() {
     sxmc()
         .args([

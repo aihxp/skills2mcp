@@ -479,6 +479,25 @@ enum InitAction {
 
 #[derive(Subcommand)]
 enum ScaffoldAction {
+    /// Generate a SKILL.md scaffold from a CLI surface profile
+    Skill {
+        /// Path to a JSON profile file
+        #[arg(long = "from-profile")]
+        from_profile: PathBuf,
+
+        /// Root directory for generated or applied artifacts
+        #[arg(long)]
+        root: Option<PathBuf>,
+
+        /// Output directory for generated skill files
+        #[arg(long, default_value = ".claude/skills")]
+        output_dir: PathBuf,
+
+        /// Output mode
+        #[arg(long, value_enum, default_value = "preview")]
+        mode: ArtifactMode,
+    },
+
     /// Generate an agent-doc snippet/block from a CLI surface profile
     AgentDoc {
         /// Path to a JSON profile file
@@ -515,6 +534,25 @@ enum ScaffoldAction {
         /// Root directory for generated or applied artifacts
         #[arg(long)]
         root: Option<PathBuf>,
+
+        /// Output mode
+        #[arg(long, value_enum, default_value = "preview")]
+        mode: ArtifactMode,
+    },
+
+    /// Generate an MCP wrapper scaffold from a CLI surface profile
+    McpWrapper {
+        /// Path to a JSON profile file
+        #[arg(long = "from-profile")]
+        from_profile: PathBuf,
+
+        /// Root directory for generated or applied artifacts
+        #[arg(long)]
+        root: Option<PathBuf>,
+
+        /// Output directory for generated wrapper files
+        #[arg(long, default_value = ".sxmc/mcp-wrappers")]
+        output_dir: PathBuf,
 
         /// Output mode
         #[arg(long, value_enum, default_value = "preview")]
@@ -2188,6 +2226,24 @@ async fn main() -> anyhow::Result<()> {
         },
 
         Commands::Scaffold { action } => match action {
+            ScaffoldAction::Skill {
+                from_profile,
+                root,
+                output_dir,
+                mode,
+            } => {
+                let root = resolve_generation_root(root)?;
+                let profile = cli_surfaces::load_profile(&from_profile)?;
+                let artifacts =
+                    cli_surfaces::generate_skill_artifacts(&profile, &root, &output_dir);
+                let outcomes = cli_surfaces::materialize_artifacts(
+                    &artifacts,
+                    AiClientProfile::GenericStdioMcp,
+                    mode,
+                    &root,
+                )?;
+                print_write_outcomes(&outcomes);
+            }
             ScaffoldAction::AgentDoc {
                 from_profile,
                 client,
@@ -2218,6 +2274,24 @@ async fn main() -> anyhow::Result<()> {
                 );
                 let outcomes =
                     cli_surfaces::materialize_artifacts(&[artifact], client, mode, &root)?;
+                print_write_outcomes(&outcomes);
+            }
+            ScaffoldAction::McpWrapper {
+                from_profile,
+                root,
+                output_dir,
+                mode,
+            } => {
+                let root = resolve_generation_root(root)?;
+                let profile = cli_surfaces::load_profile(&from_profile)?;
+                let artifacts =
+                    cli_surfaces::generate_mcp_wrapper_artifacts(&profile, &root, &output_dir)?;
+                let outcomes = cli_surfaces::materialize_artifacts(
+                    &artifacts,
+                    AiClientProfile::GenericStdioMcp,
+                    mode,
+                    &root,
+                )?;
                 print_write_outcomes(&outcomes);
             }
         },
