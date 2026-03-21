@@ -3,8 +3,9 @@
 This guide consolidates the release checklist, compatibility notes, smoke
 tests, and benchmark summary.
 
-For a concrete maintainer validation pass against `0.1.8`, see
-[`VALIDATION_RUN_v0.1.8.md`](VALIDATION_RUN_v0.1.8.md).
+For a concrete maintainer validation pass against **`0.1.9`**, see
+[`VALIDATION_RUN_v0.1.9.md`](VALIDATION_RUN_v0.1.9.md). The prior **`0.1.8`**
+snapshot remains in [`VALIDATION_RUN_v0.1.8.md`](VALIDATION_RUN_v0.1.8.md).
 
 ## What To Run Before A Release
 
@@ -94,10 +95,6 @@ The current validation posture is:
 
 ## Latest maintainer snapshot
 
-**[VALIDATION_RUN_v0.1.8.md](VALIDATION_RUN_v0.1.8.md)** — full pass for **v0.1.8** (tests, `certify_release.sh`, `smoke_real_world_mcps.sh`, benchmarks, five real skills, five npm MCPs, promptless multi-invocation checks, **MCP -> CLI** features, and **`sxmc bake` + `sxmc mcp`** “CLI -> agent” workflow).
+**[VALIDATION_RUN_v0.1.9.md](VALIDATION_RUN_v0.1.9.md)** — **v0.1.9** pass: tests (**121**), certify + smoke, benchmarks, five skills, five MCPs, **JSON output checks**, promptless multi-invocation, **MCP → CLI**, **`sxmc mcp`** workflow, and manual **`sxmc mcp session`** stateful proof (fixture server).
 
-One important boundary from earlier validation was that repeated standalone
-`sxmc stdio ...` invocations do not preserve MCP session memory. That is still
-true for one-shot CLI use. Stateful multi-step MCP flows should now use
-`sxmc mcp session <server>`, which keeps a baked connection open for repeated
-tool, prompt, and resource operations inside one explicit session.
+Repeated standalone **`sxmc stdio …`** invocations still do **not** share MCP session memory. For continuity, use **`sxmc mcp session <server>`** (see validation doc §10).

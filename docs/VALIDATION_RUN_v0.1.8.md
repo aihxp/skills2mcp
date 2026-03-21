@@ -1,5 +1,7 @@
 # Validation run — **sxmc v0.1.8** (2026-03-21)
 
+**Newer run:** see [`VALIDATION_RUN_v0.1.9.md`](VALIDATION_RUN_v0.1.9.md) for **v0.1.9** (JSON checks, `sxmc mcp session`, updated test counts).
+
 This document records a **maintainer-style validation pass**: automated tests,
 release certification, optional npm MCP smoke, wall-clock benchmarks,
 **feature behavior** (not only performance), five real skills, five official
