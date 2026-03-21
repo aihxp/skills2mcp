@@ -88,3 +88,7 @@ The current validation posture is:
 - real-world MCP smoke is scripted
 - broad end-to-end paths are covered in tests
 - remaining work should come from real user findings, not speculative expansion
+
+## Latest maintainer snapshot
+
+**[VALIDATION_RUN_v0.1.8.md](VALIDATION_RUN_v0.1.8.md)** — full pass for **v0.1.8** (tests, `certify_release.sh`, `smoke_real_world_mcps.sh`, benchmarks, five real skills, five npm MCPs, promptless multi-invocation checks, **MCP → CLI** features, and **`sxmc bake` + `sxmc mcp`** “CLI → agent” workflow).
