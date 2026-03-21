@@ -190,6 +190,21 @@ failure classes:
 - quoting and command spawning:
   - ad hoc shell-wrapped JSON-RPC scripts are brittle around nested JSON and platform-specific command parsing
 
+In the current comparison model, the most common hidden-cost failures are:
+
+| # | Failure mode | What happens | Typical retry impact |
+|---|---|---|---|
+| 1 | Skipped or malformed initialization | Some servers reject later calls entirely | `+1-2` turns |
+| 2 | Wrong argument shape | `-32602`, `-32603`, or validation failures | `+2-3` turns |
+| 3 | Wrong protocol/version assumptions | Server rejects or behaves unexpectedly | `+1-2` turns |
+| 4 | Response framing/buffering mistakes | Partial or mixed JSON breaks parsing | `+2-3` turns |
+| 5 | `stderr` mixed into `stdout` | JSON parsing fails even when the call succeeded | `+1-2` turns |
+| 6 | Missing server startup args | Server crashes, hangs, or starts in the wrong mode | `+1-2` turns |
+| 7 | Calling unsupported capabilities | Prompt/resource calls fail on tool-only servers | `+1-2` turns |
+| 8 | No cleanup/process hygiene | Zombie processes, port conflicts, flaky follow-up runs | cumulative |
+| 9 | Interactive package-manager prompts | `npx`/installer flows hang waiting for confirmation | `+2-3` turns |
+| 10 | Wrong API URL/request construction | `404`, `400`, or content-type failures | `+2-4` turns |
+
 The intended `sxmc` recovery path is:
 
 1. `sxmc mcp grep <pattern>` or `sxmc mcp tools <server> --limit 10`
@@ -200,6 +215,22 @@ The intended `sxmc` recovery path is:
 Recent CLI behavior also points failed tool calls back toward schema inspection
 and session mode so agents can recover in one turn instead of rediscovering the
 failure mode from raw JSON-RPC errors.
+
+In practice, `sxmc` reduces or absorbs most of these failure classes because it
+handles:
+
+- MCP session initialization and capability discovery
+- zero-arg and object-shaped tool arguments
+- `stdout`/`stderr` separation in the intended machine-readable path
+- process spawning and baked connection reuse
+- schema inspection and stateful fallback (`mcp session`) in the recovery path
+- API request construction from operation metadata instead of ad hoc URL assembly
+
+That does **not** mean every call succeeds unconditionally on the first try:
+broken upstream servers, auth mistakes, bad inputs, and network failures can
+still fail. The more accurate product claim is that `sxmc` removes a large
+fraction of the *self-inflicted* retry loops that come from hand-built protocol
+glue.
 
 ## Startup Sanity
 

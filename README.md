@@ -44,6 +44,7 @@ In the current real-world comparison set:
   - about `20-37` fewer agent turns
   - the biggest token wins in API discovery, MCP tool invocation, and security scanning
   - the biggest turn wins in `serve + inspect` and cross-server grep workflows
+  - much of the hidden savings comes from avoiding retry loops around MCP protocol glue, stderr/stdout parsing, and hand-built request shaping
 
 ```
 Skills  -->  MCP Server     (serve skills to any MCP client)
