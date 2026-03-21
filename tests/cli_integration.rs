@@ -366,6 +366,7 @@ fn test_bake_lifecycle() {
 #[test]
 fn test_mcp_servers_and_tools_via_bake() {
     let temp = tempfile::tempdir().unwrap();
+    let bake_name = "fixture-mcp-tools";
     let inner = serde_json::to_string(&vec![
         sxmc_bin_string(),
         "serve".to_string(),
@@ -378,7 +379,7 @@ fn test_mcp_servers_and_tools_via_bake() {
         .args([
             "bake",
             "create",
-            "fixture-mcp",
+            bake_name,
             "--type",
             "stdio",
             "--source",
@@ -393,11 +394,11 @@ fn test_mcp_servers_and_tools_via_bake() {
         .args(["mcp", "servers"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("fixture-mcp [stdio]"))
+        .stdout(predicate::str::contains("fixture-mcp-tools [stdio]"))
         .stdout(predicate::str::contains("Fixture MCP server"));
 
     sxmc_with_config_home(temp.path())
-        .args(["mcp", "tools", "fixture-mcp", "--limit", "2"])
+        .args(["mcp", "tools", bake_name, "--limit", "2"])
         .assert()
         .success()
         .stdout(predicate::str::contains("Tools (2 shown of"))
@@ -440,6 +441,7 @@ fn test_mcp_grep_via_bake() {
 #[test]
 fn test_mcp_info_call_prompt_and_read_via_bake() {
     let temp = tempfile::tempdir().unwrap();
+    let bake_name = "fixture-mcp-info";
     let inner = serde_json::to_string(&vec![
         sxmc_bin_string(),
         "serve".to_string(),
@@ -452,7 +454,7 @@ fn test_mcp_info_call_prompt_and_read_via_bake() {
         .args([
             "bake",
             "create",
-            "fixture-mcp",
+            bake_name,
             "--type",
             "stdio",
             "--source",
@@ -465,7 +467,7 @@ fn test_mcp_info_call_prompt_and_read_via_bake() {
         .args([
             "mcp",
             "info",
-            "fixture-mcp/get_skill_details",
+            "fixture-mcp-info/get_skill_details",
             "--format",
             "toon",
         ])
@@ -478,7 +480,7 @@ fn test_mcp_info_call_prompt_and_read_via_bake() {
         .args([
             "mcp",
             "call",
-            "fixture-mcp/get_skill_details",
+            "fixture-mcp-info/get_skill_details",
             r#"{"name":"simple-skill","return_type":"both"}"#,
             "--pretty",
         ])
@@ -490,7 +492,7 @@ fn test_mcp_info_call_prompt_and_read_via_bake() {
         .args([
             "mcp",
             "prompt",
-            "fixture-mcp/simple-skill",
+            "fixture-mcp-info/simple-skill",
             "arguments=friend",
         ])
         .assert()
@@ -501,7 +503,7 @@ fn test_mcp_info_call_prompt_and_read_via_bake() {
         .args([
             "mcp",
             "read",
-            "fixture-mcp/skill://skill-with-references/references/style-guide.md",
+            "fixture-mcp-info/skill://skill-with-references/references/style-guide.md",
         ])
         .assert()
         .success()
