@@ -89,7 +89,7 @@ pub fn inspect_cli(command_spec: &str, allow_self: bool) -> Result<CliSurfacePro
         ));
     }
 
-    let help_text = read_help_text(&parts)?;
+    let help_text = read_help_text(&parts, &command_name)?;
     Ok(parse_help_text(&command_name, executable, &help_text))
 }
 
@@ -107,15 +107,51 @@ fn is_self_command(command_name: &str) -> bool {
     lowered == "sxmc" || lowered == "sxmc.exe"
 }
 
-fn read_help_text(parts: &[String]) -> Result<String> {
+fn read_help_text(parts: &[String], command_name: &str) -> Result<String> {
+    let primary = run_help_variant(parts, &["--help"])?;
+    let mut candidates = vec![primary.clone()];
+
+    let lowered = primary.to_ascii_lowercase();
+    if lowered.contains("--help-all") || lowered.contains("complete help information") {
+        if let Ok(text) = run_help_variant(parts, &["--help-all"]) {
+            if !text.trim().is_empty() {
+                candidates.push(text);
+            }
+        }
+    }
+    if lowered.contains("--help all") || lowered.contains("help all") {
+        if let Ok(text) = run_help_variant(parts, &["--help", "all"]) {
+            if !text.trim().is_empty() {
+                candidates.push(text);
+            }
+        }
+    }
+
+    candidates
+        .into_iter()
+        .max_by_key(|text| score_help_text(command_name, &parts[0], text))
+        .ok_or_else(|| {
+            SxmcError::Other(format!(
+                "Command '{}' did not return readable help output",
+                parts[0]
+            ))
+        })
+}
+
+fn run_help_variant(parts: &[String], extra_args: &[&str]) -> Result<String> {
     let mut command = Command::new(&parts[0]);
     if parts.len() > 1 {
         command.args(&parts[1..]);
     }
-    command.arg("--help");
-    let output = command
-        .output()
-        .map_err(|e| SxmcError::Other(format!("Failed to run '{} --help': {}", parts[0], e)))?;
+    command.args(extra_args);
+    let output = command.output().map_err(|e| {
+        SxmcError::Other(format!(
+            "Failed to run '{} {}': {}",
+            parts[0],
+            extra_args.join(" "),
+            e
+        ))
+    })?;
 
     let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
     let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
@@ -133,6 +169,26 @@ fn read_help_text(parts: &[String]) -> Result<String> {
     }
 
     Ok(text)
+}
+
+fn score_help_text(command_name: &str, source_identifier: &str, help: &str) -> i32 {
+    let profile = parse_help_text(command_name, source_identifier, help);
+    let mut score = 0;
+
+    if profile.summary != format!("{} command-line interface", command_name) {
+        score += 10;
+    }
+    if !profile.summary.to_ascii_lowercase().starts_with("usage:") {
+        score += 5;
+    }
+    score += (profile.subcommands.len() as i32) * 4;
+    score += (profile.options.len() as i32) * 2;
+    score += (profile.examples.len() as i32) * 3;
+    if profile.description.is_some() {
+        score += 2;
+    }
+
+    score
 }
 
 fn parse_help_text(command_name: &str, source_identifier: &str, help: &str) -> CliSurfaceProfile {
@@ -194,12 +250,26 @@ fn select_summary(lines: &[&str], command_name: &str) -> String {
         .find(|line| !line.is_empty())
         .unwrap_or(command_name);
 
+    let mut skipping_usage_block = false;
     for line in lines {
         let trimmed = line.trim();
         if trimmed.is_empty() {
+            skipping_usage_block = false;
             continue;
         }
+        if skipping_usage_block {
+            if line.starts_with(char::is_whitespace)
+                || trimmed.starts_with('[')
+                || trimmed.starts_with('<')
+            {
+                continue;
+            }
+            skipping_usage_block = false;
+        }
         if is_unhelpful_summary_line(trimmed, command_name) {
+            if looks_like_usage_line(trimmed, command_name) {
+                skipping_usage_block = true;
+            }
             continue;
         }
         return sanitize_for_profile(trimmed, command_name);
@@ -527,8 +597,18 @@ fn is_major_section_heading(line: &str) -> bool {
 }
 
 fn is_command_section_heading(line: &str) -> bool {
-    let lowered = line.to_ascii_lowercase();
-    lowered.contains("command") || lowered.contains("subcommand")
+    let trimmed = line.trim();
+    let lowered = trimmed.trim_end_matches(':').to_ascii_lowercase();
+    let has_keyword = lowered.contains("command") || lowered.contains("subcommand");
+    let all_caps = trimmed.chars().any(|c| c.is_ascii_alphabetic())
+        && trimmed.chars().all(|c| {
+            c.is_ascii_uppercase()
+                || c.is_ascii_digit()
+                || c.is_ascii_whitespace()
+                || matches!(c, '&' | '/' | '-' | '_' | '(' | ')' | ':')
+        });
+
+    has_keyword && (trimmed.ends_with(':') || all_caps || lowered == "usage")
 }
 
 fn looks_like_usage_line(line: &str, command_name: &str) -> bool {
@@ -661,16 +741,24 @@ fn parse_subcommand_list(line: &str) -> Vec<String> {
         return Vec::new();
     }
 
-    line.split(',')
+    let items: Vec<&str> = line
+        .split(',')
         .map(str::trim)
-        .filter(|item| {
-            !item.is_empty()
-                && item
-                    .chars()
-                    .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.'))
-        })
-        .map(str::to_string)
-        .collect()
+        .filter(|item| !item.is_empty())
+        .collect();
+
+    if items.len() < 2 {
+        return Vec::new();
+    }
+
+    if items.iter().all(|item| {
+        item.chars()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.'))
+    }) {
+        return items.into_iter().map(str::to_string).collect();
+    }
+
+    Vec::new()
 }
 
 fn push_subcommand(subcommands: &mut Vec<ProfileSubcommand>, candidate: ProfileSubcommand) {
@@ -841,7 +929,9 @@ EXAMPLES
 
     #[test]
     fn parse_git_style_common_commands() {
-        let help = r#"usage: git [-v | --version] [-h | --help] <command> [<args>]
+        let help = r#"usage: git [-v | --version] [-h | --help] [-C <path>] [-c <name>=<value>]
+           [--exec-path[=<path>]] [--html-path] [--man-path] [--info-path]
+           <command> [<args>]
 
 These are common Git commands used in various situations:
 
@@ -931,6 +1021,10 @@ Options:
             .subcommands
             .iter()
             .any(|command| command.name == "inspect"));
+        assert!(!profile
+            .subcommands
+            .iter()
+            .any(|command| command.name.starts_with("--")));
         let option = profile
             .options
             .iter()

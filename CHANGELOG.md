@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-03-21
+
+### Changed
+
+- CLI inspection now skips raw usage continuations when picking summaries, which cleans up generated profiles, agent docs, and skill scaffolds for tools like `git`
+- grouped command detection is broader and more precise, covering `CORE COMMANDS`, `ADDITIONAL COMMANDS`, npm-style command lists, and Git-style command groupings without inventing bogus subcommands
+- option parsing now handles wrapped and colon-delimited help layouts more cleanly, improving `node` and `python3` profiles
+- CLI profile sanitization now strips local absolute paths from generated summaries and descriptions so host-specific install paths do not leak into AI-facing artifacts
+- inspection safely probes richer help variants like `--help-all` when the CLI advertises them and chooses the higher-signal result
+- regression coverage now includes real `git`, `cargo`, and `node` inspection behavior in addition to parser fixtures for `gh`, `git`, `npm`, `node`, `python3`, and `cargo`
+
 ## [0.2.2] - 2026-03-21
 
 ### Added
@@ -239,6 +250,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 [0.1.8]: https://github.com/aihxp/sxmc/compare/v0.1.7...v0.1.8
 [0.1.9]: https://github.com/aihxp/sxmc/compare/v0.1.8...v0.1.9
 [0.2.0]: https://github.com/aihxp/sxmc/compare/v0.1.9...v0.2.0
-[0.2.2]: https://github.com/aihxp/sxmc/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/aihxp/sxmc/compare/v0.2.0...v0.2.1
+[0.2.2]: https://github.com/aihxp/sxmc/compare/v0.2.1...v0.2.2
+[0.2.3]: https://github.com/aihxp/sxmc/compare/v0.2.2...v0.2.3
 [0.1.0]: https://github.com/aihxp/sxmc/releases/tag/v0.1.0

@@ -336,15 +336,15 @@ fn test_inspect_cli_self_with_allow_self() {
 fn test_inspect_cli_git_detects_common_subcommands() {
     let profile = command_json(&["inspect", "cli", "git", "--pretty"]);
     assert_eq!(profile["command"], "git");
-    assert_ne!(
-        profile["summary"],
-        Value::String("usage: git [-v | --version] [-h | --help] <command> [<args>]".into())
-    );
+    let summary = profile["summary"].as_str().unwrap_or_default();
+    assert!(!summary.to_ascii_lowercase().starts_with("usage:"));
+    assert!(!summary.contains("--exec-path"));
 
     let subcommands = profile["subcommands"].as_array().unwrap();
     assert!(subcommands.iter().any(|entry| entry["name"] == "clone"
         && entry["summary"] == "Clone a repository into a new directory"));
     assert!(subcommands.iter().any(|entry| entry["name"] == "fetch"));
+    assert!(!subcommands.iter().any(|entry| entry["name"] == "grow"));
 }
 
 #[test]
@@ -353,6 +353,16 @@ fn test_inspect_cli_cargo_uses_primary_subcommand_names() {
     let subcommands = profile["subcommands"].as_array().unwrap();
     assert!(subcommands.iter().any(|entry| entry["name"] == "build"));
     assert!(!subcommands.iter().any(|entry| entry["name"] == "build, b"));
+}
+
+#[test]
+fn test_inspect_cli_node_avoids_option_shaped_subcommands() {
+    let profile = command_json(&["inspect", "cli", "node", "--pretty"]);
+    let subcommands = profile["subcommands"].as_array().unwrap();
+    assert!(subcommands.iter().any(|entry| entry["name"] == "inspect"));
+    assert!(!subcommands
+        .iter()
+        .any(|entry| { entry["name"].as_str().unwrap_or_default().starts_with("--") }));
 }
 
 #[test]
