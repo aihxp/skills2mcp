@@ -1054,6 +1054,11 @@ fn doctor_value(root: &std::path::Path) -> Result<Value> {
                 "why": "Generate reviewable startup docs and host configs before applying them."
             },
             {
+                "surface": "local_skills_or_prompts",
+                "command": "sxmc serve --paths <dir>",
+                "why": "Expose a local skills directory as an MCP server when you want prompts and tools to show up in AI hosts."
+            },
+            {
                 "surface": "suspicious_skill_or_repo",
                 "command": "sxmc scan --paths <dir>",
                 "why": "Check for prompt injection, secrets, Unicode tricks, and dangerous script patterns."
@@ -1073,11 +1078,26 @@ fn print_doctor_report(value: &Value) {
                 .count()
         })
         .unwrap_or(0);
+    let portable_profiles_present = value["portable_profile_dir"]["present"]
+        .as_bool()
+        .unwrap_or(false);
+    let portable_profiles_path = value["portable_profile_dir"]["path"]
+        .as_str()
+        .unwrap_or_default();
 
     println!("Root: {}", value["root"].as_str().unwrap_or("<unknown>"));
     println!(
         "Baked MCP servers: {}",
         value["baked_mcp_servers"].as_u64().unwrap_or(0)
+    );
+    println!(
+        "Profile cache dir: {} ({})",
+        if portable_profiles_present {
+            "present"
+        } else {
+            "missing"
+        },
+        portable_profiles_path
     );
     println!("Startup files present: {startup_present}/{startup_total}");
     println!();
@@ -1085,26 +1105,45 @@ fn print_doctor_report(value: &Value) {
     if let Some(files) = startup_files {
         let mut entries: Vec<_> = files.iter().collect();
         entries.sort_by(|a, b| a.0.cmp(b.0));
-        for (name, details) in entries {
-            let present = details["present"].as_bool().unwrap_or(false);
-            let path = details["path"].as_str().unwrap_or_default();
-            println!(
-                "- {}: {} ({})",
-                name,
-                if present { "present" } else { "missing" },
-                path
-            );
+        let present: Vec<_> = entries
+            .iter()
+            .filter(|(_, details)| details["present"].as_bool().unwrap_or(false))
+            .collect();
+        let missing: Vec<_> = entries
+            .iter()
+            .filter(|(_, details)| !details["present"].as_bool().unwrap_or(false))
+            .collect();
+
+        if !present.is_empty() {
+            println!("  Present:");
+            for (name, details) in present {
+                let path = details["path"].as_str().unwrap_or_default();
+                println!("  - {} ({})", name, path);
+            }
+        }
+
+        if !missing.is_empty() {
+            println!("  Missing:");
+            for (name, details) in missing {
+                let path = details["path"].as_str().unwrap_or_default();
+                println!("  - {} ({})", name, path);
+            }
         }
     }
     println!();
-    println!("Use sxmc first when the surface is unknown:");
+    println!("Recommended first moves:");
     if let Some(moves) = value["recommended_first_moves"].as_array() {
-        for item in moves {
+        for (index, item) in moves.iter().enumerate() {
             let surface = item["surface"].as_str().unwrap_or("surface");
             let command = item["command"].as_str().unwrap_or_default();
             let why = item["why"].as_str().unwrap_or_default();
-            println!("- {}: `{}`", surface.replace('_', " "), command);
-            println!("  {}", why);
+            println!(
+                "{}. {} -> `{}`",
+                index + 1,
+                surface.replace('_', " "),
+                command
+            );
+            println!("   {}", why);
         }
     }
 }

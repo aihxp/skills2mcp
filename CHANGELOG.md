@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.2.9] - 2026-03-22
+
+### Changed
+
+- Homebrew inspection now merges real `GLOBAL OPTIONS` like `--debug`, `--quiet`, `--verbose`, and `--help` back into the richer `brew commands` profile instead of dropping to zero top-level options
+- human `sxmc doctor` output now groups present vs missing startup files, shows the profile cache directory, and recommends `sxmc serve --paths <dir>` when local skills or prompts should be exposed over MCP
+- generated agent docs, skills, and `llms.txt` exports now show subcommand counts plus overflow hints instead of silently truncating larger CLIs after the first few entries
+- interactive CLI inspection now emits lightweight stderr progress notes on cache misses and slower supplemental probes like `brew commands`
+- CLI inspection profiles are cached against the executable fingerprint, bake create/update validate saved sources by default, and broader named-secret patterns are detected in scans
+- the repo now ships generated `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, Cursor rules, and Copilot instructions as a self-dogfooding example
+
 ## [0.2.8] - 2026-03-22
 
 ### Added

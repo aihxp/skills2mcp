@@ -61,13 +61,7 @@ pub(crate) fn render_agent_doc(profile: &CliSurfaceProfile, client: AiClientProf
         }
     }
 
-    if !profile.subcommands.is_empty() {
-        lines.push(String::new());
-        lines.push("High-confidence subcommands:".into());
-        for subcommand in profile.subcommands.iter().take(5) {
-            lines.push(format!("- `{}`: {}", subcommand.name, subcommand.summary));
-        }
-    }
+    push_subcommand_block(&mut lines, profile, 8, "Key subcommands");
 
     if !profile.environment.is_empty() {
         lines.push(String::new());
@@ -162,13 +156,7 @@ pub(crate) fn render_portable_agent_doc(profile: &CliSurfaceProfile) -> String {
         }
     }
 
-    if !profile.subcommands.is_empty() {
-        lines.push(String::new());
-        lines.push("High-confidence subcommands:".into());
-        for subcommand in profile.subcommands.iter().take(5) {
-            lines.push(format!("- `{}`: {}", subcommand.name, subcommand.summary));
-        }
-    }
+    push_subcommand_block(&mut lines, profile, 8, "Key subcommands");
 
     lines.join("\n")
 }
@@ -193,13 +181,7 @@ pub(crate) fn render_llms_txt(profile: &CliSurfaceProfile) -> String {
         }
     }
 
-    if !profile.subcommands.is_empty() {
-        lines.push(String::new());
-        lines.push("## High-Confidence Subcommands".into());
-        for subcommand in profile.subcommands.iter().take(6) {
-            lines.push(format!("- `{}`: {}", subcommand.name, subcommand.summary));
-        }
-    }
+    push_subcommand_block(&mut lines, profile, 12, "## Key Subcommands");
 
     if !profile.environment.is_empty() {
         lines.push(String::new());
@@ -327,13 +309,7 @@ pub(crate) fn render_skill_markdown(profile: &CliSurfaceProfile) -> String {
         }
     }
 
-    if !profile.subcommands.is_empty() {
-        body.push(String::new());
-        body.push("High-confidence subcommands:".into());
-        for subcommand in profile.subcommands.iter().take(5) {
-            body.push(format!("- `{}`: {}", subcommand.name, subcommand.summary));
-        }
-    }
+    push_subcommand_block(&mut body, profile, 10, "Key subcommands");
 
     body.push(String::new());
     body.push("Execution guidance:".into());
@@ -377,6 +353,12 @@ pub(crate) fn render_mcp_wrapper_readme(profile: &CliSurfaceProfile) -> String {
         for subcommand in profile.subcommands.iter().take(5) {
             lines.push(format!("- `{}`: {}", subcommand.name, subcommand.summary));
         }
+        if profile.subcommands.len() > 5 {
+            lines.push(format!(
+                "- ... plus {} more discovered subcommands in the inspected profile.",
+                profile.subcommands.len() - 5
+            ));
+        }
     }
 
     if !profile.examples.is_empty() {
@@ -397,4 +379,98 @@ pub(crate) fn render_mcp_wrapper_readme(profile: &CliSurfaceProfile) -> String {
         "- Add server code, tests, and launch scripts beside this scaffold as needed.".into(),
     );
     lines.join("\n")
+}
+
+fn push_subcommand_block(
+    lines: &mut Vec<String>,
+    profile: &CliSurfaceProfile,
+    limit: usize,
+    heading: &str,
+) {
+    if profile.subcommands.is_empty() {
+        return;
+    }
+
+    let total = profile.subcommands.len();
+    let shown = total.min(limit);
+    lines.push(String::new());
+    lines.push(format!("{heading} (showing {shown} of {total}):"));
+    for subcommand in profile.subcommands.iter().take(limit) {
+        lines.push(format!("- `{}`: {}", subcommand.name, subcommand.summary));
+    }
+    if total > limit {
+        lines.push(format!(
+            "- ... plus {} more discovered subcommands in the inspected profile.",
+            total - limit
+        ));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{push_subcommand_block, render_skill_markdown};
+    use crate::cli_surfaces::model::{
+        CliSurfaceProfile, ConfidenceLevel, OutputBehavior, ProfileSource, ProfileSubcommand,
+        Provenance, PROFILE_SCHEMA,
+    };
+
+    fn demo_profile_with_subcommands(count: usize) -> CliSurfaceProfile {
+        CliSurfaceProfile {
+            profile_schema: PROFILE_SCHEMA.into(),
+            command: "demo".into(),
+            summary: "Demo CLI summary.".into(),
+            description: Some("Demo CLI description.".into()),
+            source: ProfileSource {
+                kind: "cli".into(),
+                identifier: "demo".into(),
+            },
+            subcommands: (0..count)
+                .map(|index| ProfileSubcommand {
+                    name: format!("cmd-{index}"),
+                    summary: format!("Command {index}."),
+                    confidence: ConfidenceLevel::Medium,
+                })
+                .collect(),
+            subcommand_profiles: Vec::new(),
+            options: Vec::new(),
+            positionals: Vec::new(),
+            examples: Vec::new(),
+            auth: Vec::new(),
+            environment: Vec::new(),
+            output_behavior: OutputBehavior {
+                stdout_style: "plain_text".into(),
+                stderr_usage: "unknown".into(),
+                machine_friendly: false,
+            },
+            workflows: Vec::new(),
+            confidence_notes: Vec::new(),
+            provenance: Provenance {
+                generated_by: "sxmc".into(),
+                generator_version: env!("CARGO_PKG_VERSION").into(),
+                source_kind: "cli".into(),
+                source_identifier: "demo".into(),
+                profile_schema: PROFILE_SCHEMA.into(),
+                generation_depth: 0,
+                generated_at: "unix:0".into(),
+            },
+        }
+    }
+
+    #[test]
+    fn push_subcommand_block_reports_total_and_overflow() {
+        let profile = demo_profile_with_subcommands(12);
+        let mut lines = Vec::new();
+        push_subcommand_block(&mut lines, &profile, 5, "Key subcommands");
+        let rendered = lines.join("\n");
+        assert!(rendered.contains("Key subcommands (showing 5 of 12):"));
+        assert!(rendered.contains("plus 7 more discovered subcommands"));
+    }
+
+    #[test]
+    fn render_skill_markdown_surfaces_more_than_five_subcommands() {
+        let profile = demo_profile_with_subcommands(14);
+        let rendered = render_skill_markdown(&profile);
+        assert!(rendered.contains("Key subcommands (showing 10 of 14):"));
+        assert!(rendered.contains("plus 4 more discovered subcommands"));
+    }
 }

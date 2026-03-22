@@ -197,6 +197,13 @@ fn test_doctor_reports_recommended_first_moves_as_json_off_tty() {
             .as_str()
             .unwrap_or_default()
             .contains("sxmc api <url-or-spec> --list")));
+    assert!(moves
+        .iter()
+        .any(|entry| entry["surface"] == "local_skills_or_prompts"
+            && entry["command"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("sxmc serve --paths <dir>")));
 }
 
 #[test]

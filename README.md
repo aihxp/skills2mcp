@@ -85,6 +85,7 @@ sxmc inspect cli <tool> --depth 1 --format json-pretty
 sxmc stdio "<cmd>" --list
 sxmc mcp grep <pattern>
 sxmc api <url-or-spec> --list
+sxmc serve --paths <dir>
 sxmc scan --paths <dir>
 ```
 
@@ -108,7 +109,7 @@ sxmc completions bash > ~/.local/share/bash-completion/completions/sxmc
 - `sxmc mcp grep "file"` searches across baked MCP servers, which is hard to reproduce cleanly with one-off tooling.
 - `sxmc scan` catches hidden Unicode, dangerous permissions, and prompt-injection patterns that plain `grep` misses.
 - `sxmc inspect cli ...` plus `sxmc init ai ...` turns per-host AI setup into generated, reviewable artifacts.
-- `sxmc doctor` makes the next move explicit for agents and humans: unknown CLI, unknown MCP server, unknown API, or startup setup.
+- `sxmc doctor` makes the next move explicit for agents and humans: unknown CLI, unknown MCP server, unknown API, local skills you want to serve, or startup setup.
 
 The current validation docs capture the real-world comparison set, token/turn estimates, and hidden retry-cost analysis.
 
@@ -132,6 +133,7 @@ The current validation docs capture the real-world comparison set, token/turn es
 - managed markdown/TOML blocks instead of wholesale overwrites
 - recursive CLI inspection with `sxmc inspect cli --depth 1`
 - compact CLI inspection with `sxmc inspect cli --compact` for lower-context summaries
+- generated docs and skill scaffolds now surface larger CLI inventories with counts instead of hiding everything after the first few subcommands
 - CLI inspection profiles are cached so repeated agent lookups do not keep reparsing unchanged binaries
 - cleanup support with `sxmc init ai --remove`
 - CLI inspection now supplements sparse help output with `man` pages without clobbering richer `--help` surfaces

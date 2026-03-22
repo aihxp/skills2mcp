@@ -143,6 +143,7 @@ sxmc inspect cli <tool> --depth 1 --format json-pretty
 sxmc stdio "<cmd>" --list
 sxmc mcp grep <pattern>
 sxmc api <url-or-spec> --list
+sxmc serve --paths <dir>
 sxmc scan --paths <dir>
 ```
 
@@ -228,9 +229,11 @@ Deeper inspection:
 - nested subcommand profiles are stored under `subcommand_profiles`
 - macOS and BSD-style tools can fall back to `man` output when `--help` is sparse or unsupported
 - higher-signal `--help` results stay primary, while `man` output supplements weak summaries and missing options
+- Homebrew inspection now keeps real global options like `--debug`, `--quiet`, `--verbose`, and `--help` while still using `brew commands` for broad subcommand discovery
 - parser hardening now recovers top-level flags for CLIs like `gh` and `rustup`
 - Python-style environment variables are filtered out of subcommand detection
 - inspected CLI profiles are cached automatically, keyed by command plus executable fingerprint, so repeated agent lookups reuse stable profiles until the binary changes
+- generated agent docs, skills, and `llms.txt` exports show subcommand counts and overflow hints instead of truncating large CLIs with no indication of what was omitted
 
 Current host profiles:
 

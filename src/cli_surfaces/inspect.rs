@@ -1,4 +1,5 @@
 use std::fs;
+use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -15,6 +16,7 @@ use crate::cli_surfaces::model::{
 use crate::error::{Result, SxmcError};
 
 const CLI_PROFILE_CACHE_TTL_SECS: u64 = 60 * 60 * 24 * 14;
+const CLI_PROFILE_CACHE_SCHEMA_VERSION: u32 = 3;
 const COMPACT_SUBCOMMAND_LIMIT: usize = 12;
 const COMPACT_OPTION_LIMIT: usize = 15;
 
@@ -107,6 +109,16 @@ pub fn inspect_cli_with_depth(
         return Ok(profile);
     }
 
+    maybe_print_progress(&format!(
+        "Inspecting `{}`{}",
+        parts.join(" "),
+        if depth > 0 {
+            format!(" (depth {depth})")
+        } else {
+            String::new()
+        }
+    ));
+
     let profile = inspect_parts(&parts, &command_name, executable, allow_self, depth, 0)?;
     store_cached_profile(&cache_key, &profile);
     Ok(profile)
@@ -184,7 +196,8 @@ fn profile_cache_key(parts: &[String], depth: usize) -> String {
     let executable = parts.first().map(String::as_str).unwrap_or_default();
     let fingerprint = executable_fingerprint(executable);
     format!(
-        "cli-profile:v2:{}:{}:{}:{}",
+        "cli-profile:v{}:{}:{}:{}:{}",
+        CLI_PROFILE_CACHE_SCHEMA_VERSION,
         env!("CARGO_PKG_VERSION"),
         depth,
         fingerprint,
@@ -259,6 +272,15 @@ fn inspect_parts(
     if let Ok(man_text) = read_man_page_text(command_name) {
         let man_profile = parse_help_text(command_name, source_identifier, &man_text);
         merge_man_page_profile(&mut profile, &man_profile, command_name);
+        if command_name == "brew" {
+            merge_profile_options(
+                &mut profile.options,
+                parse_specific_option_section(
+                    &man_text.lines().collect::<Vec<_>>(),
+                    &["global options"],
+                ),
+            );
+        }
     }
     if let Ok(supplemental_text) = read_supplemental_help_text(parts, command_name) {
         let supplemental_profile =
@@ -394,6 +416,35 @@ fn merge_supplemental_profile(
     }
 }
 
+fn merge_profile_options(options: &mut Vec<ProfileOption>, candidates: Vec<ProfileOption>) {
+    for candidate in candidates {
+        if let Some(existing) = options
+            .iter_mut()
+            .find(|option| option.name == candidate.name)
+        {
+            if existing.short.is_none() && candidate.short.is_some() {
+                existing.short = candidate.short.clone();
+            }
+            if existing.value_name.is_none() && candidate.value_name.is_some() {
+                existing.value_name = candidate.value_name.clone();
+            }
+            if existing.summary.is_none()
+                || candidate.summary.as_ref().map(|s| s.len()).unwrap_or(0)
+                    > existing.summary.as_ref().map(|s| s.len()).unwrap_or(0)
+            {
+                existing.summary = candidate.summary.clone();
+            }
+            if matches!(existing.confidence, ConfidenceLevel::Low)
+                && !matches!(candidate.confidence, ConfidenceLevel::Low)
+            {
+                existing.confidence = candidate.confidence;
+            }
+        } else {
+            options.push(candidate);
+        }
+    }
+}
+
 fn read_help_text(parts: &[String], command_name: &str) -> Result<String> {
     let mut help_candidates = Vec::new();
 
@@ -522,6 +573,7 @@ fn run_help_variant(parts: &[String], extra_args: &[&str]) -> Result<String> {
 
 fn read_supplemental_help_text(parts: &[String], command_name: &str) -> Result<String> {
     if command_name == "brew" && parts.len() == 1 {
+        maybe_print_progress("Collecting supplemental Homebrew commands with `brew commands`");
         let output = run_help_variant(parts, &["commands"])?;
         let mut lines = vec!["COMMANDS".to_string()];
 
@@ -852,6 +904,49 @@ fn parse_options(lines: &[&str], command_name: &str) -> Vec<ProfileOption> {
         let man_options = parse_man_options(lines);
         if man_options.len() > options.len() {
             return man_options;
+        }
+    }
+
+    if command_name == "brew" {
+        merge_profile_options(
+            &mut options,
+            parse_specific_option_section(lines, &["global options"]),
+        );
+    }
+
+    options
+}
+
+fn parse_specific_option_section(lines: &[&str], headings: &[&str]) -> Vec<ProfileOption> {
+    let mut options = Vec::new();
+    let mut in_options = false;
+
+    for line in lines {
+        let trimmed = line.trim_end();
+        let stripped = trimmed.trim();
+        if stripped.is_empty() {
+            continue;
+        }
+        if is_named_section(stripped, headings) {
+            in_options = true;
+            continue;
+        }
+        if !in_options {
+            continue;
+        }
+        if is_major_section_heading(stripped) && !is_named_section(stripped, headings) {
+            break;
+        }
+        if let Some(option) = parse_option_entry(stripped) {
+            options.push(option);
+        } else if let Some(last) = options.last_mut() {
+            if !stripped.starts_with('-') {
+                let merged = match &last.summary {
+                    Some(existing) => format!("{existing} {stripped}"),
+                    None => stripped.to_string(),
+                };
+                last.summary = Some(merged.trim().to_string());
+            }
         }
     }
 
@@ -1911,9 +2006,18 @@ fn now_string() -> String {
     format!("unix:{}", seconds)
 }
 
+fn maybe_print_progress(message: &str) {
+    if std::io::stderr().is_terminal() && std::env::var_os("SXMC_NO_PROGRESS").is_none() {
+        eprintln!("[sxmc] {message}");
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{parse_command_spec, parse_help_text, strip_overstrike};
+    use super::{
+        merge_profile_options, parse_command_spec, parse_help_text, parse_specific_option_section,
+        strip_overstrike, ConfidenceLevel, ProfileOption,
+    };
 
     #[test]
     fn parse_json_array_command_spec() {
@@ -2173,6 +2277,60 @@ SYNOPSIS
         assert!(profile.options.iter().any(|option| option.name == "-F"));
         assert!(profile.options.iter().any(|option| option.name == "-v"));
         assert!(profile.options.iter().any(|option| option.name == "-f"));
+    }
+
+    #[test]
+    fn parse_brew_global_options_section_recovers_real_options() {
+        let help = r#"GLOBAL OPTIONS
+       These options are applicable across multiple subcommands.
+
+       -d, --debug
+              Display any debugging information.
+
+       -q, --quiet
+              Make some output more quiet.
+
+       -v, --verbose
+              Make some output more verbose.
+
+       -h, --help
+              Show this message.
+"#;
+        let options =
+            parse_specific_option_section(&help.lines().collect::<Vec<_>>(), &["global options"]);
+        assert!(options.iter().any(|option| option.name == "--debug"));
+        assert!(options.iter().any(|option| option.name == "--quiet"));
+        assert!(options.iter().any(|option| option.name == "--verbose"));
+        assert!(options.iter().any(|option| option.name == "--help"));
+    }
+
+    #[test]
+    fn merge_profile_options_enriches_existing_entries() {
+        let mut options = vec![ProfileOption {
+            name: "--verbose".into(),
+            short: None,
+            value_name: None,
+            required: false,
+            summary: None,
+            confidence: ConfidenceLevel::Medium,
+        }];
+        merge_profile_options(
+            &mut options,
+            vec![ProfileOption {
+                name: "--verbose".into(),
+                short: Some("-v".into()),
+                value_name: None,
+                required: false,
+                summary: Some("Make some output more verbose.".into()),
+                confidence: ConfidenceLevel::High,
+            }],
+        );
+        assert_eq!(options[0].short.as_deref(), Some("-v"));
+        assert_eq!(
+            options[0].summary.as_deref(),
+            Some("Make some output more verbose.")
+        );
+        assert_eq!(options[0].confidence, ConfidenceLevel::Medium);
     }
 
     #[test]
