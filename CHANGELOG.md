@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.2.6] - 2026-03-22
+
+### Changed
+
+- CLI inspection now filters bogus subcommands much more aggressively when parsing rich `--help` and `man` output, which fixes false positives in tools like `rg`, `grep`, and `python3`
+- man-page parsing now prefers wrapped `NAME` descriptions over version banners and attribution text, which cleans up summaries for tools like `grep`, `cal`, `zip`, and `unzip`
+- synopsis-derived flag extraction now recovers concise option sets for sparse man-page tools like `awk`
+- Homebrew-style command sections now recover real top-level commands instead of collapsing into option-heavy profiles with no subcommands
+- parser regression coverage now includes `rg`, wrapped man-page summaries, `brew`, and `awk`
+
 ## [0.2.5] - 2026-03-22
 
 ### Changed
