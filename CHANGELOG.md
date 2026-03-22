@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Changed
+
+- CLI inspection now merges richer help probing with targeted `man`-page supplementation instead of letting sparse manual output replace higher-signal `--help` results
+- top-level option recovery improved for CLIs like `gh` and `rustup`, so lightweight global flags are preserved alongside subcommand extraction
+- summary extraction is stricter about skipping generic section banners and option prose, which produces cleaner profiles and downstream AI artifacts for tools like `node`, `npm`, and `python3`
+- Python-style environment variables are now filtered out of subcommand detection during CLI inspection
+- integration coverage now includes real `gh`, `rustup`, `python3`, and `npm` parser regressions in addition to the earlier `git`, `cargo`, and `node` cases
+
 ## [0.2.4] - 2026-03-22
 
 ### Added

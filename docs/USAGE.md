@@ -212,6 +212,9 @@ Deeper inspection:
 - `sxmc inspect cli --depth 1` recursively inspects top-level high-confidence subcommands
 - nested subcommand profiles are stored under `subcommand_profiles`
 - macOS and BSD-style tools can fall back to `man` output when `--help` is sparse or unsupported
+- higher-signal `--help` results stay primary, while `man` output supplements weak summaries and missing options
+- parser hardening now recovers top-level flags for CLIs like `gh` and `rustup`
+- Python-style environment variables are filtered out of subcommand detection
 
 Current host profiles:
 

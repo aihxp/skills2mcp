@@ -88,6 +88,15 @@ The more reliable value signal is workflow compression:
 | Scan skills | Grep and manual review | `sxmc scan` | Structured, severity-ranked findings with deeper checks. |
 | `CLI -> AI` startup setup | Manual doc/config work per host | `sxmc inspect cli ...` + `sxmc init ai ...` | Host-aware startup artifacts generated instead of handwritten. |
 
+Recent parser hardening also improved the real CLI inspection path that powers
+`CLI -> AI` scaffolding:
+
+- `gh` now preserves grouped subcommands and top-level flags together
+- `rustup` now keeps its global top-level flags
+- `python3` no longer turns environment variables into fake subcommands
+- `node`, `npm`, and `python3` now produce cleaner summaries for downstream
+  agent-doc and skill scaffolds
+
 ## Real-World Side-by-Side
 
 The current comparison set exercised:

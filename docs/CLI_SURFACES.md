@@ -96,6 +96,19 @@ The profile is designed to capture things agents and startup docs actually need:
 Because this comes from CLI help, some fields are directly observed while
 others are heuristic. That is why the profile carries confidence metadata.
 
+Current parser hardening focuses on keeping shallow inspection useful for real
+developer CLIs:
+
+- richer `--help` output stays primary when available
+- `man` pages are used as targeted fallback/supplementation, especially for BSD
+  and macOS tools
+- grouped command layouts like `CORE COMMANDS` and npm-style command lists are
+  normalized into subcommands
+- obvious environment-variable symbols are filtered so they do not become fake
+  subcommands
+- top-level global flags are recovered even when a CLI mostly emphasizes
+  subcommands
+
 ### Stage 2: `sxmc init ai --from-cli <command> --client <host>`
 
 `init ai` takes the profile and generates startup-facing files for a selected

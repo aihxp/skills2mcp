@@ -76,6 +76,13 @@ sxmc init ai --from-cli gh --coverage full --host claude-code,cursor,github-copi
 sxmc init ai --from-cli gh --coverage full --host claude-code --mode apply --remove
 ```
 
+Recent inspection hardening:
+
+- `sxmc inspect cli gh` now recovers top-level flags as well as grouped subcommands
+- `sxmc inspect cli rustup` preserves global options like `--verbose`, `--quiet`, `--help`, and `--version`
+- `sxmc inspect cli python3` avoids treating environment variables as subcommands
+- `sxmc inspect cli node --depth 1` keeps the `inspect` subcommand while using a cleaner runtime summary
+
 Generate shell completions:
 
 ```bash
@@ -111,6 +118,7 @@ The current validation docs capture the real-world comparison set, token/turn es
 - managed markdown/TOML blocks instead of wholesale overwrites
 - recursive CLI inspection with `sxmc inspect cli --depth 1`
 - cleanup support with `sxmc init ai --remove`
+- CLI inspection now supplements sparse help output with `man` pages without clobbering richer `--help` surfaces
 - atomic bake persistence
 - baked stdio configs can pin a base directory for portable relative paths
 - configurable timeouts for networked commands
