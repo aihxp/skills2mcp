@@ -90,6 +90,10 @@ sxmc serve --paths <dir>
 sxmc scan --paths <dir>
 ```
 
+`inspect cli` executes a real command via subprocess spawn. It can inspect
+installed binaries or explicit executable paths, but it does not see shell-only
+aliases or functions from your interactive shell.
+
 Recent inspection hardening:
 
 - `sxmc inspect cli gh` now recovers top-level flags as well as grouped subcommands
@@ -144,6 +148,7 @@ The current validation docs capture the real-world comparison set, token/turn es
 - bake create/update now validate sources by default, with `--skip-validate` when you intentionally want to persist a broken or offline target
 - bake validation errors now include source-type-specific guidance for stdio, HTTP MCP, OpenAPI, and GraphQL targets
 - invalid `--from-profile` / `inspect profile` inputs now explain that `sxmc` expected a real CLI surface profile from `sxmc inspect cli ...`
+- `inspect cli` targets must be real executables on `PATH` (or explicit paths), not shell-only aliases or functions
 - baked stdio configs can pin a base directory for portable relative paths
 - configurable timeouts for networked commands
 - HTTP MCP guardrails for max concurrency and request body size

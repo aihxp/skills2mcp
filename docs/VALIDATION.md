@@ -97,6 +97,14 @@ Recent parser hardening also improved the real CLI inspection path that powers
 - `node`, `npm`, and `python3` now produce cleaner summaries for downstream
   agent-doc and skill scaffolds
 
+Validation note:
+
+- `sxmc inspect cli` executes real binaries via subprocess spawn.
+- shell aliases or shell functions that only exist in an interactive shell are
+  not visible to that subprocess environment.
+- treat “works in my shell, not in `sxmc inspect cli`” as an environment/path
+  check first, not automatically as a parser regression.
+
 ## Real-World Side-by-Side
 
 The current comparison set exercised:

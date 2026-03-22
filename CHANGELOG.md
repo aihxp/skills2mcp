@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.2.12] - 2026-03-22
+
+### Changed
+
+- docs and validation notes now clarify that `sxmc inspect cli` executes real subprocesses and therefore expects an actual executable on `PATH` (or an explicit path), not a shell-only alias or function
+
 ## [0.2.11] - 2026-03-22
 
 ### Changed

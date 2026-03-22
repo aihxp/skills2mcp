@@ -158,6 +158,13 @@ sxmc inspect cli cargo --depth 1 --format json-pretty
 sxmc inspect cli gh --depth 2 --compact --format json-pretty
 ```
 
+Important:
+
+- `sxmc inspect cli ...` runs a real subprocess, so the target must be an
+  actual executable on `PATH` or an explicit path to a binary/script.
+- shell aliases and shell functions from an interactive session are not visible
+  to `sxmc` subprocess execution.
+
 Generate startup-facing artifacts for a host profile:
 
 ```bash
@@ -240,6 +247,7 @@ Deeper inspection:
 - inspected CLI profiles are cached automatically, keyed by command plus executable fingerprint, so repeated agent lookups reuse stable profiles until the binary changes
 - interactive recursive inspections emit lightweight stderr progress notes on cache hits, nested subcommand probes, and slower supplemental lookups such as `brew commands`
 - generated agent docs, skills, and `llms.txt` exports show subcommand counts and overflow hints instead of truncating large CLIs with no indication of what was omitted
+- if a command only exists as a shell alias/function wrapper, `sxmc inspect cli` will correctly report that no real executable was found; that is an environment issue, not a parser failure
 
 Current host profiles:
 
