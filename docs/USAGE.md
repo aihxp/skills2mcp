@@ -151,6 +151,7 @@ Inspect a real CLI:
 ```bash
 sxmc inspect cli gh --format json-pretty
 sxmc inspect cli gh --format toon
+sxmc inspect cli curl --compact --format json-pretty
 sxmc inspect cli cargo --depth 1 --format json-pretty
 ```
 
@@ -218,15 +219,18 @@ Safety rules:
 - `--coverage full` is the best way to generate broad startup coverage without committing to every host at once
 - `--coverage full --mode apply` requires one or more `--host` values and sidecars the non-selected hosts
 - `sxmc init ai --remove` removes previously applied managed blocks and generated config entries for the selected hosts
+- `sxmc bake create` and `sxmc bake update` validate sources by default; use `--skip-validate` when you intentionally want to persist an offline or placeholder target
 
 Deeper inspection:
 
 - `sxmc inspect cli --depth 1` recursively inspects top-level high-confidence subcommands
+- `sxmc inspect cli --compact` returns a lower-context summary with counts plus the top subcommands/options instead of the full profile
 - nested subcommand profiles are stored under `subcommand_profiles`
 - macOS and BSD-style tools can fall back to `man` output when `--help` is sparse or unsupported
 - higher-signal `--help` results stay primary, while `man` output supplements weak summaries and missing options
 - parser hardening now recovers top-level flags for CLIs like `gh` and `rustup`
 - Python-style environment variables are filtered out of subcommand detection
+- inspected CLI profiles are cached automatically, keyed by command plus executable fingerprint, so repeated agent lookups reuse stable profiles until the binary changes
 
 Current host profiles:
 
@@ -256,6 +260,7 @@ Full-coverage generation produces:
 - `.junie/guidelines.md` for Junie
 - `.windsurf/rules/sxmc-cli-ai.md` for Windsurf
 - host config scaffolds for Claude, Cursor, Gemini, OpenAI/Codex, and generic stdio/http MCP
+- this repo itself now checks in generated startup docs for the main host surfaces as a self-dogfooding example
 
 At a high level:
 

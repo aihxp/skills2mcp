@@ -1063,14 +1063,26 @@ fn doctor_value(root: &std::path::Path) -> Result<Value> {
 }
 
 fn print_doctor_report(value: &Value) {
+    let startup_files = value["startup_files"].as_object();
+    let startup_total = startup_files.map(|files| files.len()).unwrap_or(0);
+    let startup_present = startup_files
+        .map(|files| {
+            files
+                .values()
+                .filter(|details| details["present"].as_bool().unwrap_or(false))
+                .count()
+        })
+        .unwrap_or(0);
+
     println!("Root: {}", value["root"].as_str().unwrap_or("<unknown>"));
     println!(
         "Baked MCP servers: {}",
         value["baked_mcp_servers"].as_u64().unwrap_or(0)
     );
+    println!("Startup files present: {startup_present}/{startup_total}");
     println!();
     println!("Startup files:");
-    if let Some(files) = value["startup_files"].as_object() {
+    if let Some(files) = startup_files {
         let mut entries: Vec<_> = files.iter().collect();
         entries.sort_by(|a, b| a.0.cmp(b.0));
         for (name, details) in entries {
@@ -1093,6 +1105,75 @@ fn print_doctor_report(value: &Value) {
             let why = item["why"].as_str().unwrap_or_default();
             println!("- {}: `{}`", surface.replace('_', " "), command);
             println!("  {}", why);
+        }
+    }
+}
+
+async fn validate_bake_config(config: &BakeConfig) -> Result<()> {
+    match config.source_type {
+        SourceType::Stdio | SourceType::Http => {
+            let client = ConnectedMcpClient::connect(config).await.map_err(|error| {
+                sxmc::error::SxmcError::Other(format!(
+                    "Bake '{}' could not connect during validation: {}",
+                    config.name, error
+                ))
+            })?;
+            let result = client.list_tools().await.map_err(|error| {
+                sxmc::error::SxmcError::Other(format!(
+                    "Bake '{}' connected but list_tools failed during validation: {}",
+                    config.name, error
+                ))
+            });
+            client.close().await?;
+            result.map(|_| ())
+        }
+        SourceType::Api => {
+            let headers = parse_headers(&config.auth_headers)?;
+            api::ApiClient::connect(
+                &config.source,
+                &headers,
+                parse_timeout(config.timeout_seconds.or(Some(10))),
+            )
+            .await
+            .map(|_| ())
+            .map_err(|error| {
+                sxmc::error::SxmcError::Other(format!(
+                    "Bake '{}' could not validate API source '{}': {}",
+                    config.name, config.source, error
+                ))
+            })
+        }
+        SourceType::Spec => {
+            let headers = parse_headers(&config.auth_headers)?;
+            openapi::OpenApiSpec::load(
+                &config.source,
+                &headers,
+                parse_timeout(config.timeout_seconds.or(Some(10))),
+            )
+            .await
+            .map(|_| ())
+            .map_err(|error| {
+                sxmc::error::SxmcError::Other(format!(
+                    "Bake '{}' could not validate OpenAPI source '{}': {}",
+                    config.name, config.source, error
+                ))
+            })
+        }
+        SourceType::Graphql => {
+            let headers = parse_headers(&config.auth_headers)?;
+            graphql::GraphQLClient::connect(
+                &config.source,
+                &headers,
+                parse_timeout(config.timeout_seconds.or(Some(10))),
+            )
+            .await
+            .map(|_| ())
+            .map_err(|error| {
+                sxmc::error::SxmcError::Other(format!(
+                    "Bake '{}' could not validate GraphQL source '{}': {}",
+                    config.name, config.source, error
+                ))
+            })
         }
     }
 }
@@ -1834,12 +1915,17 @@ async fn main() -> anyhow::Result<()> {
             InspectAction::Cli {
                 command,
                 depth,
+                compact,
                 pretty,
                 format,
                 allow_self,
             } => {
                 let profile = cli_surfaces::inspect_cli_with_depth(&command, allow_self, depth)?;
-                let value = cli_surfaces::profile_value(&profile);
+                let value = if compact {
+                    cli_surfaces::compact_profile_value(&profile)
+                } else {
+                    cli_surfaces::profile_value(&profile)
+                };
                 if let Some(format) = output::prefer_structured_output(format, pretty) {
                     println!("{}", output::format_structured_value(&value, format));
                 } else {
@@ -1849,11 +1935,17 @@ async fn main() -> anyhow::Result<()> {
             }
             InspectAction::Profile {
                 input,
+                compact,
                 pretty,
                 format,
             } => {
                 let raw = std::fs::read_to_string(&input)?;
-                let value: Value = serde_json::from_str(&raw)?;
+                let profile: cli_surfaces::CliSurfaceProfile = serde_json::from_str(&raw)?;
+                let value = if compact {
+                    cli_surfaces::compact_profile_value(&profile)
+                } else {
+                    cli_surfaces::profile_value(&profile)
+                };
                 if let Some(format) = output::prefer_structured_output(format, pretty) {
                     println!("{}", output::format_structured_value(&value, format));
                 } else {
@@ -2012,10 +2104,10 @@ async fn main() -> anyhow::Result<()> {
                 env_vars,
                 timeout_seconds,
                 base_dir,
+                skip_validate,
             } => {
                 let st = parse_source_type(&source_type);
-                let mut store = BakeStore::load()?;
-                store.create(BakeConfig {
+                let config = BakeConfig {
                     name: name.clone(),
                     source_type: st,
                     source,
@@ -2024,7 +2116,12 @@ async fn main() -> anyhow::Result<()> {
                     env_vars,
                     timeout_seconds,
                     description,
-                })?;
+                };
+                if !skip_validate {
+                    validate_bake_config(&config).await?;
+                }
+                let mut store = BakeStore::load()?;
+                store.create(config)?;
                 println!("Created bake: {}", name);
             }
             BakeAction::List => {
@@ -2073,6 +2170,7 @@ async fn main() -> anyhow::Result<()> {
                 env_vars,
                 timeout_seconds,
                 base_dir,
+                skip_validate,
             } => {
                 let mut store = BakeStore::load()?;
                 let existing = match store.show(&name) {
@@ -2114,6 +2212,9 @@ async fn main() -> anyhow::Result<()> {
                     description: description.or(existing.description),
                 };
 
+                if !skip_validate {
+                    validate_bake_config(&updated).await?;
+                }
                 store.update(updated)?;
                 println!("Updated bake: {}", name);
             }

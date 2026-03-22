@@ -71,6 +71,7 @@ Turn a CLI into startup-facing AI artifacts:
 ```bash
 sxmc doctor
 sxmc inspect cli gh --format toon
+sxmc inspect cli curl --compact --format json-pretty
 sxmc inspect cli cargo --depth 1 --format json-pretty
 sxmc init ai --from-cli gh --coverage full --mode preview
 sxmc init ai --from-cli gh --coverage full --host claude-code,cursor,github-copilot --mode apply
@@ -130,13 +131,17 @@ The current validation docs capture the real-world comparison set, token/turn es
 - low-confidence CLI profiles are blocked from startup-doc generation unless explicitly overridden
 - managed markdown/TOML blocks instead of wholesale overwrites
 - recursive CLI inspection with `sxmc inspect cli --depth 1`
+- compact CLI inspection with `sxmc inspect cli --compact` for lower-context summaries
+- CLI inspection profiles are cached so repeated agent lookups do not keep reparsing unchanged binaries
 - cleanup support with `sxmc init ai --remove`
 - CLI inspection now supplements sparse help output with `man` pages without clobbering richer `--help` surfaces
 - atomic bake persistence
+- bake create/update now validate sources by default, with `--skip-validate` when you intentionally want to persist a broken or offline target
 - baked stdio configs can pin a base directory for portable relative paths
 - configurable timeouts for networked commands
 - HTTP MCP guardrails for max concurrency and request body size
 - stateful MCP workflows supported through `sxmc mcp session`
+- this repo now ships generated `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, Cursor rules, and Copilot instructions from `sxmc` itself
 
 ## Docs
 

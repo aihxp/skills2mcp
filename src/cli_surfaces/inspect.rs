@@ -1,17 +1,22 @@
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use regex::Regex;
 use serde_json::{json, Value};
 
+use crate::cache::Cache;
 use crate::cli_surfaces::model::{
     AuthRequirement, CliSurfaceProfile, ConfidenceLevel, ConfidenceNote, EnvironmentRequirement,
     OutputBehavior, ProfileExample, ProfileOption, ProfilePositional, ProfileSource,
     ProfileSubcommand, Provenance, Workflow, PROFILE_SCHEMA,
 };
 use crate::error::{Result, SxmcError};
+
+const CLI_PROFILE_CACHE_TTL_SECS: u64 = 60 * 60 * 24 * 14;
+const COMPACT_SUBCOMMAND_LIMIT: usize = 12;
+const COMPACT_OPTION_LIMIT: usize = 15;
 
 pub fn parse_command_spec(command: &str) -> Result<Vec<String>> {
     let trimmed = command.trim();
@@ -97,7 +102,14 @@ pub fn inspect_cli_with_depth(
         ));
     }
 
-    inspect_parts(&parts, &command_name, executable, allow_self, depth, 0)
+    let cache_key = profile_cache_key(&parts, depth);
+    if let Some(profile) = load_cached_profile(&cache_key) {
+        return Ok(profile);
+    }
+
+    let profile = inspect_parts(&parts, &command_name, executable, allow_self, depth, 0)?;
+    store_cached_profile(&cache_key, &profile);
+    Ok(profile)
 }
 
 pub fn load_profile(path: &Path) -> Result<CliSurfaceProfile> {
@@ -107,6 +119,126 @@ pub fn load_profile(path: &Path) -> Result<CliSurfaceProfile> {
 
 pub fn profile_value(profile: &CliSurfaceProfile) -> Value {
     serde_json::to_value(profile).unwrap_or_else(|_| json!({}))
+}
+
+pub fn compact_profile_value(profile: &CliSurfaceProfile) -> Value {
+    json!({
+        "command": profile.command,
+        "summary": profile.summary,
+        "description": profile.description,
+        "subcommand_count": profile.subcommands.len(),
+        "option_count": profile.options.len(),
+        "nested_profile_count": profile.subcommand_profiles.len(),
+        "machine_friendly": profile.output_behavior.machine_friendly,
+        "stdout_style": profile.output_behavior.stdout_style,
+        "examples": profile.examples.iter().take(3).map(|example| {
+            json!({
+                "command": example.command,
+                "summary": example.summary,
+            })
+        }).collect::<Vec<_>>(),
+        "subcommands": profile.subcommands.iter().take(COMPACT_SUBCOMMAND_LIMIT).map(|subcommand| {
+            json!({
+                "name": subcommand.name,
+                "summary": subcommand.summary,
+                "confidence": subcommand.confidence,
+            })
+        }).collect::<Vec<_>>(),
+        "options": profile.options.iter().take(COMPACT_OPTION_LIMIT).map(|option| {
+            json!({
+                "name": option.name,
+                "short": option.short,
+                "value_name": option.value_name,
+                "required": option.required,
+                "summary": option.summary,
+            })
+        }).collect::<Vec<_>>(),
+        "environment": profile.environment.iter().map(|env| {
+            json!({
+                "name": env.name,
+                "required": env.required,
+                "summary": env.summary,
+            })
+        }).collect::<Vec<_>>(),
+        "confidence_notes": profile.confidence_notes,
+        "generation_depth": profile.provenance.generation_depth,
+        "generator_version": profile.provenance.generator_version,
+    })
+}
+
+fn load_cached_profile(cache_key: &str) -> Option<CliSurfaceProfile> {
+    let cache = Cache::new(CLI_PROFILE_CACHE_TTL_SECS).ok()?;
+    let raw = cache.get(cache_key)?;
+    serde_json::from_str(&raw).ok()
+}
+
+fn store_cached_profile(cache_key: &str, profile: &CliSurfaceProfile) {
+    if let Ok(cache) = Cache::new(CLI_PROFILE_CACHE_TTL_SECS) {
+        if let Ok(raw) = serde_json::to_string(profile) {
+            let _ = cache.set(cache_key, &raw);
+        }
+    }
+}
+
+fn profile_cache_key(parts: &[String], depth: usize) -> String {
+    let executable = parts.first().map(String::as_str).unwrap_or_default();
+    let fingerprint = executable_fingerprint(executable);
+    format!(
+        "cli-profile:v2:{}:{}:{}:{}",
+        env!("CARGO_PKG_VERSION"),
+        depth,
+        fingerprint,
+        parts.join("\u{1f}")
+    )
+}
+
+fn executable_fingerprint(executable: &str) -> String {
+    let resolved = resolve_executable_path(executable);
+    if let Some(path) = resolved {
+        let canonical = fs::canonicalize(&path).unwrap_or(path.clone());
+        let metadata = fs::metadata(&canonical).ok();
+        let modified = metadata
+            .as_ref()
+            .and_then(|meta| meta.modified().ok())
+            .and_then(|time| time.duration_since(UNIX_EPOCH).ok())
+            .map(|duration| duration.as_secs())
+            .unwrap_or(0);
+        let len = metadata.map(|meta| meta.len()).unwrap_or(0);
+        format!("{}:{}:{}", canonical.display(), modified, len)
+    } else {
+        executable.to_string()
+    }
+}
+
+fn resolve_executable_path(executable: &str) -> Option<PathBuf> {
+    let candidate = Path::new(executable);
+    if (candidate.components().count() > 1 || candidate.is_absolute()) && candidate.exists() {
+        return Some(candidate.to_path_buf());
+    }
+
+    let path_var = std::env::var_os("PATH")?;
+    for dir in std::env::split_paths(&path_var) {
+        let direct = dir.join(executable);
+        if direct.is_file() {
+            return Some(direct);
+        }
+
+        #[cfg(windows)]
+        {
+            let exts = std::env::var_os("PATHEXT")
+                .unwrap_or_else(|| ".EXE;.CMD;.BAT;.COM".into())
+                .to_string_lossy()
+                .into_owned();
+            for ext in exts.split(';').filter(|ext| !ext.is_empty()) {
+                let with_ext = dir.join(format!("{}{}", executable, ext.to_ascii_lowercase()));
+                if with_ext.is_file() {
+                    return Some(with_ext);
+                }
+            }
+        }
+    }
+
+    None
 }
 
 fn is_self_command(command_name: &str) -> bool {
@@ -310,8 +442,8 @@ fn read_help_text(parts: &[String], command_name: &str) -> Result<String> {
     }
 
     Err(SxmcError::Other(format!(
-        "Command '{}' did not return readable help output",
-        parts[0]
+        "Could not parse help output for '{}'. Try running '{} --help' manually and verify it prints readable text. If the CLI uses a non-standard layout, inspect a narrower subcommand or use --compact to reduce output size.",
+        parts[0], parts[0]
     )))
 }
 
@@ -379,8 +511,9 @@ fn run_help_variant(parts: &[String], extra_args: &[&str]) -> Result<String> {
 
     if !output.status.success() && text.trim().is_empty() {
         return Err(SxmcError::Other(format!(
-            "Command '{}' did not return readable help output",
-            parts[0]
+            "Could not parse help output for '{}': the command exited without readable stdout/stderr for '{}'.",
+            parts[0],
+            extra_args.join(" ")
         )));
     }
 

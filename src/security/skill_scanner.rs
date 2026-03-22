@@ -364,6 +364,20 @@ mod tests {
     }
 
     #[test]
+    fn test_named_openai_style_secret_in_body() {
+        let skill = make_skill("leaky-openai", "SECRET=sk-1234567890abcdef");
+        let report = scan_skill(&skill);
+        assert!(report.findings.iter().any(|f| f.code == "SL-SEC-001"));
+    }
+
+    #[test]
+    fn test_named_token_secret_in_body() {
+        let skill = make_skill("leaky-token", "API_TOKEN='1234567890abcdefTOKEN'");
+        let report = scan_skill(&skill);
+        assert!(report.findings.iter().any(|f| f.code == "SL-SEC-001"));
+    }
+
+    #[test]
     fn test_wildcard_tool_permission() {
         let mut skill = make_skill("broad", "Do stuff");
         skill.frontmatter.allowed_tools = Some(vec!["*".to_string()]);

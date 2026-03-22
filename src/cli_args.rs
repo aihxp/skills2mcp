@@ -402,6 +402,8 @@ pub enum BakeAction {
         timeout_seconds: Option<u64>,
         #[arg(long)]
         base_dir: Option<PathBuf>,
+        #[arg(long)]
+        skip_validate: bool,
     },
     List,
     Show {
@@ -423,6 +425,8 @@ pub enum BakeAction {
         timeout_seconds: Option<u64>,
         #[arg(long)]
         base_dir: Option<PathBuf>,
+        #[arg(long)]
+        skip_validate: bool,
     },
     Remove {
         name: String,
@@ -436,6 +440,8 @@ pub enum InspectAction {
         #[arg(long, default_value_t = 0)]
         depth: usize,
         #[arg(long)]
+        compact: bool,
+        #[arg(long)]
         pretty: bool,
         #[arg(long, value_enum)]
         format: Option<output::StructuredOutputFormat>,
@@ -444,6 +450,8 @@ pub enum InspectAction {
     },
     Profile {
         input: PathBuf,
+        #[arg(long)]
+        compact: bool,
         #[arg(long)]
         pretty: bool,
         #[arg(long, value_enum)]

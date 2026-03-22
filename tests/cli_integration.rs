@@ -200,6 +200,44 @@ fn test_doctor_reports_recommended_first_moves_as_json_off_tty() {
 }
 
 #[test]
+fn test_inspect_cli_compact_output_reduces_profile_shape() {
+    let value = command_json(&["inspect", "cli", "cargo", "--compact"]);
+    assert_eq!(value["command"], "cargo");
+    assert!(value["subcommand_count"].as_u64().unwrap_or(0) >= 10);
+    assert!(value["option_count"].as_u64().unwrap_or(0) >= 5);
+    assert!(value["subcommands"].as_array().unwrap().len() <= 12);
+    assert!(value["options"].as_array().unwrap().len() <= 15);
+    assert!(value.get("provenance").is_none());
+}
+
+#[cfg(not(windows))]
+#[test]
+fn test_inspect_cli_cache_invalidates_when_binary_changes() {
+    let temp = tempfile::tempdir().unwrap();
+    let fake = write_fake_cli(
+        temp.path(),
+        "fake-cli\n\nA first summary.\n\nUsage:\n  fake-cli [OPTIONS]\n",
+    );
+
+    let first = command_json(&["inspect", "cli", fake.to_str().unwrap(), "--pretty"]);
+    assert_eq!(first["summary"], "A first summary.");
+
+    std::thread::sleep(Duration::from_millis(1100));
+    fs::write(
+        &fake,
+        "#!/bin/sh\ncat <<'EOF'\nfake-cli\n\nA second summary after change.\n\nUsage:\n  fake-cli [OPTIONS]\nEOF\n",
+    )
+    .unwrap();
+    use std::os::unix::fs::PermissionsExt;
+    let mut perms = fs::metadata(&fake).unwrap().permissions();
+    perms.set_mode(0o755);
+    fs::set_permissions(&fake, perms).unwrap();
+
+    let second = command_json(&["inspect", "cli", fake.to_str().unwrap(), "--pretty"]);
+    assert_eq!(second["summary"], "A second summary after change.");
+}
+
+#[test]
 fn test_inspect_cli_depth_one_collects_nested_profiles() {
     let output = sxmc()
         .args(["inspect", "cli", "cargo", "--depth", "1"])
@@ -308,6 +346,7 @@ fn test_bake_timeout_round_trip() {
             "http://127.0.0.1:8000/mcp",
             "--timeout-seconds",
             "9",
+            "--skip-validate",
         ])
         .assert()
         .success();
@@ -317,6 +356,52 @@ fn test_bake_timeout_round_trip() {
         .assert()
         .success()
         .stdout(predicate::str::contains("Timeout: 9s"));
+}
+
+#[test]
+fn test_bake_create_validates_stdio_source_by_default() {
+    let temp = tempfile::tempdir().unwrap();
+    sxmc_with_config_home(temp.path())
+        .args([
+            "bake",
+            "create",
+            "broken",
+            "--type",
+            "stdio",
+            "--source",
+            r#"["definitely-not-a-real-command-for-sxmc-tests"]"#,
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "could not connect during validation",
+        ));
+}
+
+#[test]
+fn test_bake_create_can_skip_validation() {
+    let temp = tempfile::tempdir().unwrap();
+    sxmc_with_config_home(temp.path())
+        .args([
+            "bake",
+            "create",
+            "broken",
+            "--type",
+            "stdio",
+            "--source",
+            r#"["definitely-not-a-real-command-for-sxmc-tests"]"#,
+            "--skip-validate",
+        ])
+        .assert()
+        .success();
+
+    sxmc_with_config_home(temp.path())
+        .args(["bake", "show", "broken"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(
+            "definitely-not-a-real-command-for-sxmc-tests",
+        ));
 }
 
 #[test]
@@ -1235,6 +1320,7 @@ fn test_bake_lifecycle() {
             "echo hello",
             "--description",
             "Test bake config",
+            "--skip-validate",
         ])
         .assert()
         .success()
@@ -1265,6 +1351,7 @@ fn test_bake_lifecycle() {
             "echo updated",
             "--description",
             "Updated bake config",
+            "--skip-validate",
         ])
         .assert()
         .success()

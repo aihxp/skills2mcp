@@ -54,6 +54,13 @@ static SECRET_GENERIC_API_KEY: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r#"(?i)(api[_\-]?key|api[_\-]?secret|api[_\-]?token)\s*[=:]\s*['"]?[A-Za-z0-9\-_.]{20,}['"]?"#).unwrap()
 });
 
+static SECRET_GENERIC_NAMED_VALUE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r#"(?i)(secret|secret[_\-]?key|token|access[_\-]?token|bearer[_\-]?token|openai[_\-]?api[_\-]?key|anthropic[_\-]?api[_\-]?key|github[_\-]?token|aws[_\-]?secret[_\-]?access[_\-]?key)\s*[=:]\s*['"]?[A-Za-z0-9\-_/+=]{10,}['"]?"#,
+    )
+    .unwrap()
+});
+
 static SECRET_PRIVATE_KEY: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"-----BEGIN\s+(RSA\s+)?PRIVATE\s+KEY-----").unwrap());
 
@@ -74,18 +81,27 @@ static SECRET_ANTHROPIC_KEY: LazyLock<Regex> =
 static SECRET_OPENAI_KEY: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"sk-[A-Za-z0-9]{48,}").unwrap());
 
+static SECRET_OPENAI_KEY_NAMED: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r#"(?i)(openai[_\-]?api[_\-]?key|openai[_\-]?token|api[_\-]?key|token|secret|secret[_\-]?key)\s*[=:]\s*['"]?sk-[A-Za-z0-9\-_]{10,}['"]?"#,
+    )
+    .unwrap()
+});
+
 pub fn secrets_patterns() -> Vec<&'static LazyLock<Regex>> {
     vec![
         &SECRET_AWS_KEY,
         &SECRET_AWS_SECRET,
         &SECRET_GITHUB_TOKEN,
         &SECRET_GENERIC_API_KEY,
+        &SECRET_GENERIC_NAMED_VALUE,
         &SECRET_PRIVATE_KEY,
         &SECRET_PASSWORD,
         &SECRET_CONNECTION_STRING,
         &SECRET_SLACK_TOKEN,
         &SECRET_ANTHROPIC_KEY,
         &SECRET_OPENAI_KEY,
+        &SECRET_OPENAI_KEY_NAMED,
     ]
 }
 

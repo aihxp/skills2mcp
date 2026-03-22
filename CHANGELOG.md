@@ -11,12 +11,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Added
 
 - `sxmc doctor` now reports startup-discovery status plus recommended first commands for unfamiliar CLIs, MCP servers, APIs, startup-doc setup, and skill scans
+- `sxmc inspect cli --compact` now returns a lower-context summary view for agent-friendly CLI inspection
 
 ### Changed
 
 - CLI inspection now recognizes multi-section Cobra command groups like `GITHUB ACTIONS COMMANDS` and `ALIAS COMMANDS` again, which restores the full top-level `gh` command set
 - version-banner handling is broader for mixed-case tools like `unzip`, so `man`-page `NAME` summaries win over release-banner text more reliably
+- inspected CLI profiles are now cached against the executable fingerprint so repeated lookups reuse stable profiles until the binary changes
+- bake create/update now validate saved sources by default and fail early on broken MCP/API targets unless `--skip-validate` is used
+- secret detection now catches more named token/secret assignment patterns such as short OpenAI-style keys and generic `TOKEN=` / `SECRET=` forms
 - generated CLI-to-AI agent docs now explicitly teach an `sxmc`-first workflow for unknown CLIs, MCP servers, and APIs
+- the repo now checks in generated `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, Cursor rules, and Copilot instructions as a self-dogfooding example
 - README, usage docs, demo flow, and integration coverage now reinforce the `sxmc`-first onboarding path for unknown surfaces
 
 ## [0.2.7] - 2026-03-22
